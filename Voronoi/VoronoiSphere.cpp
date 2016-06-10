@@ -6,75 +6,81 @@
 //  Copyright © 2016 Ellis Sparky Hoag. All rights reserved.
 //
 
-#include "VoronoiSphere.hpp"
+#include "VoronoiSphere.h"
 
 using namespace std;
 using namespace Voronoi;
 
-VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_points, void (*render)(vector<HalfEdgeSphere *>, float), void (*sleep)()) {
-    
+VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_points, void (*render)(vector<HalfEdgeSphere *>, float), void (*sleep)())
+{
     bool should_render = false;
     
     beach_head = NULL;
     sweep_line = 0;
     voronoi_diagram.edges.clear();
-    while (!circle_event_queue.empty()) {
+    while (!circle_event_queue.empty())
+    {
         circle_event_queue.pop();
     }
     
-    //priority_queue<PointSphere, vector<PointSphere>, PriorityQueueCompare> site_event_queue;
     priority_queue<VoronoiCellSphere *, vector<VoronoiCellSphere *>, PriorityQueueCompare> site_event_queue;
 
-    for (int i = 0; i < num_points; i++) {
+    for (int i = 0; i < num_points; i++)
+    {
         
         PointCartesian point_cartesian = PointCartesian(points[3 * i], points[3 * i + 1], points[3 * i + 2]);
         
         VoronoiCellSphere * cell = new VoronoiCellSphere(point_cartesian);
         
-        //site_event_queue.push(PointSphere(point_cartesian));
         site_event_queue.push(cell);
         
         voronoi_diagram.cells.push_back(cell);
         
     }
     
-    while (!site_event_queue.empty() || !circle_event_queue.empty()) {
+    while (!site_event_queue.empty() || !circle_event_queue.empty())
+    {
         
         //cout << "[" << site_event_queue.size() << ", " << circle_event_queue.size() << "]\n";
         
-        if (site_event_queue.empty() || (!circle_event_queue.empty() && circle_event_queue.top()->lowest_theta < site_event_queue.top()->site.theta)) {
+        if (site_event_queue.empty() || (!circle_event_queue.empty() && circle_event_queue.top()->lowest_theta < site_event_queue.top()->site.theta))
+        {
             
             CircleEventSphere * circle = circle_event_queue.top();
             sweep_line = circle->lowest_theta;
             handle_circle_event(circle);
             circle_event_queue.pop();
             
-            if (should_render) {
+            if (should_render)
+            {
                 render(voronoi_diagram.edges, sweep_line);
-                ArcSphere * cur = beach_head;
-                do {
-                    cout << cur->cell->site;
-                    cur = cur->next[0];
-                } while (cur != beach_head);
-                cout << endl;
+                //ArcSphere * cur = beach_head;
+                //do
+                //{
+                //    cout << cur->cell->site;
+                //    cur = cur->next[0];
+                //} while (cur != beach_head);
+                //cout << endl;
                 sleep();
             }
         }
-        else {
-            
+        else
+        {
             VoronoiCellSphere * cell = site_event_queue.top();
             sweep_line = cell->site.theta;
             handle_site_event(cell);
             site_event_queue.pop();
             
-            if (should_render) {
+            if (should_render)
+            {
                 render(voronoi_diagram.edges, sweep_line);
-                ArcSphere * cur = beach_head;
-                do {
-                    cout << cur->cell->site;
-                    cur = cur->next[0];
-                } while (cur != beach_head);
-                cout << endl;
+                //ArcSphere * cur = beach_head;
+                //do
+                //{
+                //    cout << cur->cell->site;
+                //    cur = cur->next[0];
+                //} while (cur != beach_head);
+                //cout << endl;
                 sleep();
             }
         }
@@ -98,19 +104,26 @@ VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_poi
     return voronoi_diagram;
 }
 
-void VoronoiSphere::finalize_diagram() {
+void VoronoiSphere::finalize_diagram()
+{
     
     //last two arcs in the beach need to be connected?
     
-    for (auto cell : voronoi_diagram.cells) {
+    for (auto cell : voronoi_diagram.cells)
+    {
         HalfEdgeSphere * left = NULL;
-        for (auto edge : cell->edges) {
-            if (!edge->is_finished) {
-                if (left == NULL) {
+        for (auto edge : cell->edges)
+        {
+            if (!edge->is_finished)
+            {
+                if (left == NULL)
+                {
                     left = edge;
                 }
-                else {
-                    if ((left->cells[0] == edge->cells[0] && left->cells[1] == edge->cells[1]) || (left->cells[0] == edge->cells[1] && left->cells[1] == edge->cells[0])) {
+                else
+                {
+                    if ((left->cells[0] == edge->cells[0] && left->cells[1] == edge->cells[1]) || (left->cells[0] == edge->cells[1] && left->cells[1] == edge->cells[0]))
+                    {
                         cout << "fixed\n";
                         left->finish(edge->start);
                         edge->finish(left->start);
@@ -122,15 +135,18 @@ void VoronoiSphere::finalize_diagram() {
     
 }
 
-void VoronoiSphere::handle_site_event(VoronoiCellSphere * cell) {
+void VoronoiSphere::handle_site_event(VoronoiCellSphere * cell)
+{
     
     //cout << "Handle site event.\n";
     
-    if (beach_head == NULL) {
+    if (beach_head == NULL)
+    {
         beach_head = new ArcSphere(cell);
         return;
     }
-    if (beach_head->next[0] == beach_head) {
+    if (beach_head->next[0] == beach_head)
+    {
         new ArcSphere(cell, beach_head, beach_head);
         beach_head->next[0]->s0 = beach_head->s1;
         beach_head->next[0]->s1 = beach_head->s0;
@@ -147,23 +163,31 @@ void VoronoiSphere::handle_site_event(VoronoiCellSphere * cell) {
         
         float phi_start, phi_end;
         
-        if (cur->prev[0] != cur && parabolic_intersection(cur->prev[0]->cell->site, cur->cell->site, left_intersection)) {
+        if (cur->prev[0] != cur && parabolic_intersection(cur->prev[0]->cell->site, cur->cell->site, left_intersection))
+        {
             phi_start = left_intersection.phi;
         }
-        else {
+        else
+        {
+            cout << "No left intersection.\n";
             phi_start = cur->cell->site.phi - M_PI;
         }
-        if (cur != cur->next[0] && parabolic_intersection(cur->cell->site, cur->next[0]->cell->site, right_intersection)) {
+        if (cur != cur->next[0] && parabolic_intersection(cur->cell->site, cur->next[0]->cell->site, right_intersection))
+        {
             phi_end = right_intersection.phi;
         }
-        else {
+        else
+        {
+            cout << "No right intersection.\n";
             phi_end = cur->cell->site.phi + M_PI;
         }
         
-        if ((phi_start < phi_end && phi_start <= cell->site.phi && cell->site.phi <= phi_end) || (phi_start > phi_end && (phi_start < cell->site.phi || cell->site.phi < phi_end)) ) {
+        if ((phi_start < phi_end && phi_start <= cell->site.phi && cell->site.phi <= phi_end) || (phi_start > phi_end && (phi_start <= cell->site.phi || cell->site.phi <= phi_end)) )
+        {
             //arc is found
             
-            if (cur->event != NULL) {
+            if (cur->event != NULL)
+            {
                 cur->event->is_valid = false;
             }
             
@@ -202,6 +226,10 @@ void VoronoiSphere::handle_site_event(VoronoiCellSphere * cell) {
             
             return;
         }
+        else if (phi_start == cell->site.phi || phi_end == cell->site.phi)
+        {
+            cout << "Three arcs intersect in the same place.\n";
+        }
         
         //cur = cur->next[0];
         
@@ -217,10 +245,10 @@ void VoronoiSphere::handle_site_event(VoronoiCellSphere * cell) {
     } while (true);
 }
 
-void VoronoiSphere::handle_circle_event(CircleEventSphere * event) {
-    
-    if (event->is_valid) {
-    
+void VoronoiSphere::handle_circle_event(CircleEventSphere * event)
+{
+    if (event->is_valid)
+    {
         //cout << "Handle circle event " << event->arc->cell->site;
 
         ArcSphere * left = event->arc->prev[0];
@@ -240,24 +268,29 @@ void VoronoiSphere::handle_circle_event(CircleEventSphere * event) {
         right->add_edge_left(edge);
 
         //finish old edges
-        if (event->arc->s0 != NULL) {
+        if (event->arc->s0 != NULL)
+        {
             event->arc->s0->finish(vertex);
         }
-        if (event->arc->s1 != NULL) {
+        if (event->arc->s1 != NULL)
+        {
             event->arc->s1->finish(vertex);
         }
         
         //remove from beach;
-        if (beach_head == event->arc) {
+        if (beach_head == event->arc)
+        {
             beach_head = event->arc->next[0];
         }
         delete event->arc;
         
         //invalidate old circle events
-        if (left->event != NULL) {
+        if (left->event != NULL)
+        {
             left->event->is_valid = false;
         }
-        if (right->event != NULL) {
+        if (right->event != NULL)
+        {
             right->event->is_valid = false;
         }
         
@@ -270,27 +303,38 @@ void VoronoiSphere::handle_circle_event(CircleEventSphere * event) {
 }
 
 
-void VoronoiSphere::check_circle_event(ArcSphere * arc) {
+void VoronoiSphere::check_circle_event(ArcSphere * arc)
+{
     
-    if (arc == NULL || arc->prev[0] == NULL || arc->next[0] == NULL || arc->prev[0] == arc->next[0] || arc == arc->next[0] || arc->prev[0] == arc) {
+    if (arc == NULL || arc->prev[0] == NULL || arc->next[0] == NULL || arc->prev[0] == arc->next[0] || arc == arc->next[0] || arc->prev[0] == arc)
+    {
+        //cout << "Invalid circle event.\n";
         return;
     }
-    
-    //arc->event = NULL;
     
     PointSphere center;
     float lowest_theta;
     
     make_circle(arc->prev[0]->cell->site, arc->cell->site, arc->next[0]->cell->site, center, lowest_theta);
     
-    if (lowest_theta > sweep_line) {
-    
+    //if (lowest_theta > sweep_line)
+    {
         arc->event = new CircleEventSphere(arc, center, lowest_theta);
         circle_event_queue.push(arc->event);
     }
+    //else {
+    //    cout << lowest_theta << ", " << sweep_line << endl;
+    //}
+    //else if (arc->event != NULL)
+    //{
+    //    //cout << "not null\n";
+    //    arc->event->is_valid = false;
+    //    arc->event = NULL;
+    //}
 }
 
-void VoronoiSphere::make_circle(PointSphere a, PointSphere b, PointSphere c, PointSphere & circumcenter, float & lowest_theta) {
+void VoronoiSphere::make_circle(PointSphere a, PointSphere b, PointSphere c, PointSphere & circumcenter, float & lowest_theta)
+{
     
     PointCartesian i = a.get_cartesian();
     PointCartesian j = b.get_cartesian();
@@ -307,16 +351,20 @@ void VoronoiSphere::make_circle(PointSphere a, PointSphere b, PointSphere c, Poi
 }
 
 
-bool VoronoiSphere::parabolic_intersection(PointSphere left, PointSphere right, PointSphere & intersection) {
+bool VoronoiSphere::parabolic_intersection(PointSphere left, PointSphere right, PointSphere & intersection)
+{
     
-    if (left.theta >= sweep_line && right.theta >= sweep_line) {
+    if (left.theta >= sweep_line && right.theta >= sweep_line)
+    {
         return false;
     }
-    else if (left.theta >= sweep_line && right.theta < sweep_line) {
+    else if (left.theta >= sweep_line && right.theta < sweep_line)
+    {
         intersection = phi_to_point(right, left.phi);
         return true;
     }
-    else if (right.theta >= sweep_line && left.theta < sweep_line) {
+    else if (right.theta >= sweep_line && left.theta < sweep_line)
+    {
         intersection = phi_to_point(left, right.phi);
         return true;
     }
@@ -339,7 +387,8 @@ bool VoronoiSphere::parabolic_intersection(PointSphere left, PointSphere right, 
     
     float sqrt_a_b = sqrt(a*a + b*b);
     
-    if (fabs(e) > sqrt_a_b) {
+    if (fabs(e) > sqrt_a_b)
+    {
         // out of domain of sin
         return false;
     }
@@ -352,18 +401,22 @@ bool VoronoiSphere::parabolic_intersection(PointSphere left, PointSphere right, 
     
     intersection = phi_to_point(left, phi_int);
     
-    if (intersection.phi >= M_PI) {
+    if (intersection.phi >= M_PI)
+    {
         intersection.phi -= 2 * M_PI;
     }
-    else if (intersection.phi <= -M_PI) {
+    else if (intersection.phi <= -M_PI)
+    {
         intersection.phi += 2 * M_PI;
     }
     return true;
 }
 
-PointSphere VoronoiSphere::phi_to_point(PointSphere arc, float phi) {
+PointSphere VoronoiSphere::phi_to_point(PointSphere arc, float phi)
+{
     
-    if (arc.theta >= sweep_line) {
+    if (arc.theta >= sweep_line)
+    {
         return PointSphere(sweep_line, phi);
     }
     float a = cos(sweep_line) - cos(arc.theta);

@@ -1,13 +1,13 @@
 //
-//  Voronoi2D.hpp
+//  Voronoi2D.h
 //  Voronoi
 //
 //  Created by Ellis Sparky Hoag on 6/1/16.
 //  Copyright © 2016 Ellis Sparky Hoag. All rights reserved.
 //
 
-#ifndef Voronoi2D_hpp
-#define Voronoi2D_hpp
+#ifndef Voronoi2D_h
+#define Voronoi2D_h
 
 #include <iostream>
 #include <vector>
@@ -19,7 +19,7 @@
 //#define INF numeric_limits<float>::max()
 #define INF 100000000.f
 
-using namespace std;
+//using namespace std;
 
 namespace Voronoi {
 
@@ -36,7 +36,7 @@ namespace Voronoi {
         const friend bool operator<(const Point2D & left, const Point2D & right) {return left.x == right.x ? left.y < right.y : left.x < right.x;}
         const friend bool operator>(const Point2D & left, const Point2D & right) {return left.x == right.x ? left.y > right.y : left.x > right.x;}
         
-        friend ostream & operator<<(ostream & out, const Point2D & p) {return out << "(" << p.x << ", " << p.y << ")\n";}
+        friend std::ostream & operator<<(std::ostream & out, const Point2D & p) {return out << "(" << p.x << ", " << p.y << ")\n";}
         
         float x, y;
     };
@@ -59,9 +59,9 @@ namespace Voronoi {
         
     public:
         
-        void generate_voronoi_2D(float * points, int num_points, void (*render)(vector<HalfEdge2D *>, float), void (*sleep)());
+        void generate_voronoi_2D(float * points, int num_points, void (*render)(std::vector<HalfEdge2D *>, float), void (*sleep)());
         
-        vector<HalfEdge2D *> get_voronoi_edges() {return voronoi_edges;}
+        std::vector<HalfEdge2D *> get_voronoi_edges() {return voronoi_edges;}
         
     private:
         
@@ -85,9 +85,9 @@ namespace Voronoi {
         
         //vector<Point2D> voronoi_verticies;
         
-        vector<HalfEdge2D *> voronoi_edges;
+        std::vector<HalfEdge2D *> voronoi_edges;
         
-        priority_queue<CircleEvent2D, vector<CircleEvent2D *>, PriorityQueueCompare> circle_event_queue;
+        std::priority_queue<CircleEvent2D, std::vector<CircleEvent2D *>, PriorityQueueCompare> circle_event_queue;
         
         Arc2D * beach_head;
         
@@ -124,4 +124,4 @@ namespace Voronoi {
     };
 }
 
-#endif /* Voronoi2D_hpp */
+#endif /* Voronoi2D_h */

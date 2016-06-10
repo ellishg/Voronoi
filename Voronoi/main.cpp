@@ -10,8 +10,8 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_opengl.h"
 
-#include "Voronoi2D.hpp"
-#include "VoronoiSphere.hpp"
+#include "Voronoi2D.h"
+#include "VoronoiSphere.h"
 
 #define SPHERICAL_MODE
 
@@ -20,7 +20,6 @@ using namespace Voronoi;
 
 SDL_Window * window;
 SDL_Event event;
-
 
 const int num_sites = 100;
 
@@ -125,22 +124,22 @@ void render_sphere(vector<HalfEdgeSphere *> edges, float sweep_line = 0) {
     
     float angle = SDL_GetTicks() / 50.f;
     
-    //glTranslatef(0, 0, -10);
-    //glScalef(0.9, 0.9, 0.9);
     glRotatef(angle, 0, 0, 1);
-    //glRotatef(angle, 1, 0, 0);
+    //glRotatef(angle / 3.f, 1, 0, 0);
     
     render_edges_sphere(edges);
     render_points(points, num_sites, 1, 0, 0);
     
-    //sweep_line = M_PI / 2.f;
-    glColor3f(0, 1, 1.f);
-    glBegin(GL_LINE_LOOP);
-        const int num_steps = 100;
-        for (int i = 0; i < num_steps; i++) {
-            glVertex3f(sin(sweep_line) * cos(2.f * M_PI * i / num_steps), sin(sweep_line) * sin(2.f * M_PI * i / num_steps), cos(sweep_line));
-        }
-    glEnd();
+    if (sweep_line != 0)
+    {
+        glColor3f(0, 1, 1.f);
+        glBegin(GL_LINE_LOOP);
+            const int num_steps = 100;
+            for (int i = 0; i < num_steps; i++) {
+                glVertex3f(sin(sweep_line) * cos(2.f * M_PI * i / num_steps), sin(sweep_line) * sin(2.f * M_PI * i / num_steps), cos(sweep_line));
+            }
+        glEnd();
+    }
     
     SDL_GL_SwapWindow(window);
     
@@ -164,7 +163,7 @@ void render_2d(vector<HalfEdge2D *> edges, float sweep_line = 0) {
 }
 
 void sleep() {
-    SDL_Delay(25);
+    //SDL_Delay(25);
     bool delay = true;
     
     while (delay) {
@@ -182,10 +181,10 @@ void sleep() {
                             glRotatef(10, -1, 0, 0);
                             break;
                         case SDLK_LEFT:
-                            glRotatef(10, 0, 1, 0);
+                            glRotatef(10, 0, 0, 1);
                             break;
                         case SDLK_RIGHT:
-                            glRotatef(10, 0, -1, 0);
+                            glRotatef(10, 0, 0, -1);
                             break;
                         default:
                             break;
@@ -200,8 +199,24 @@ void sleep() {
 
 int main(int argc, const char * argv[]) {
     
-    //srand((unsigned)time(NULL));
-    srand(11);
+    /*
+     *  Bad seeds:
+     *  1465266993 (100 sites) Good!
+     *  1465267176 (100 sites) Good!
+     *  1465267270 (100 sites) Good!
+     *  1465267285 (1000 sites) Good!
+     *  1465483687 (1000 sites)
+     *  1465483717 (1000 sites)
+     *  1465495088 (500 sites)
+     *  1465505027 (100 sites)
+     */
+    
+    unsigned int seed = (unsigned int)time(NULL);
+    //unsigned int seed = 1465505027;
+    
+    cout << "Seed = " << seed << endl;
+    
+    srand(seed);
     
     if(SDL_Init(SDL_INIT_VIDEO))   {
         cout << "Error initializing video.\n";
@@ -239,7 +254,7 @@ int main(int argc, const char * argv[]) {
     bool is_running = true;
     
     const int precision = numeric_limits<int>::max();
-    //const int precision = 4;
+    //const int precision = 10;
     for (int i = 0; i < num_sites; i++) {
 #ifdef SPHERICAL_MODE
         float x = (rand() % precision) / (float)precision - 0.5f;
@@ -297,10 +312,10 @@ int main(int argc, const char * argv[]) {
                             glRotatef(10, -1, 0, 0);
                             break;
                         case SDLK_LEFT:
-                            glRotatef(10, 0, 1, 0);
+                            glRotatef(10, 0, 0, 1);
                             break;
                         case SDLK_RIGHT:
-                            glRotatef(10, 0, -1, 0);
+                            glRotatef(10, 0, 0, -1);
                             break;
                         default:
                             break;

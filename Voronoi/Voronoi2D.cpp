@@ -6,7 +6,7 @@
 //  Copyright © 2016 Ellis Sparky Hoag. All rights reserved.
 //
 
-#include "Voronoi2D.hpp"
+#include "Voronoi2D.h"
 
 using namespace std;
 using namespace Voronoi;
