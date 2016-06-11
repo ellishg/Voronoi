@@ -13,7 +13,7 @@ using namespace Voronoi;
 
 void Voronoi2D::generate_voronoi_2D(float * points, int num_points, void (*render)(vector<HalfEdge2D *>, float), void (*sleep)()) {
     
-    bool should_render = true;
+    bool should_render = false;
     
     X0 = Y0 = 1;
     X1 = Y1 = 0;

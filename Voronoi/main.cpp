@@ -21,7 +21,7 @@ using namespace Voronoi;
 SDL_Window * window;
 SDL_Event event;
 
-const int num_sites = 100;
+const int num_sites = 1000;
 
 #ifdef SPHERICAL_MODE
 float points[num_sites * 3];
@@ -63,10 +63,10 @@ void render_edges_sphere(vector<HalfEdgeSphere *> edges) {
         
         glColor3f(1.f, 1.f, 0.f);
         
-        //float theta0 = edges[i]->start.theta;
-        //float theta1 = edges[i]->end.theta;
-        //float phi0 = edges[i]->start.phi;
-        //float phi1 = edges[i]->end.phi;
+        //float theta0 = edges[i]->start->theta;
+        //float theta1 = edges[i]->end->theta;
+        //float phi0 = edges[i]->start->phi;
+        //float phi1 = edges[i]->end->phi;
         
         //PointCartesian start = edges[i]->start;
         //PointCartesian end = edges[i]->end.get_cartesian();
@@ -78,7 +78,6 @@ void render_edges_sphere(vector<HalfEdgeSphere *> edges) {
     
             //for (int i = 0; i < num_segments; i++) {
             //    glColor3f(1.f, (float)i / num_segments, 0.f);
-
             //    float theta = theta0 + (theta1 - theta0) * i / num_segments;
             //    float phi = phi0 + (phi1 - phi0) * i / num_segments;
             //    glVertex3f(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
@@ -116,33 +115,38 @@ void render_edges_2d(vector<HalfEdge2D *> edges) {
     }
 }
 
-void render_sphere(vector<HalfEdgeSphere *> edges, float sweep_line = 0) {
+void render_sphere(vector<HalfEdgeSphere *> edges, float sweep_line = 0, float * beach = NULL, int beach_size = 0) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glLoadIdentity();
-    
-    glRotatef(-90, 1, 0, 0);
-    
-    float angle = SDL_GetTicks() / 50.f;
-    
-    glRotatef(angle, 0, 0, 1);
-    //glRotatef(angle / 3.f, 1, 0, 0);
-    
-    render_edges_sphere(edges);
-    render_points(points, num_sites, 1, 0, 0);
     
     if (sweep_line != 0)
     {
         glColor3f(0, 1, 1.f);
         glBegin(GL_LINE_LOOP);
-            const int num_steps = 100;
-            for (int i = 0; i < num_steps; i++) {
-                glVertex3f(sin(sweep_line) * cos(2.f * M_PI * i / num_steps), sin(sweep_line) * sin(2.f * M_PI * i / num_steps), cos(sweep_line));
-            }
+        const int num_steps = 100;
+        for (int i = 0; i < num_steps; i++) {
+            glVertex3f(sin(sweep_line) * cos(2.f * M_PI * i / num_steps), sin(sweep_line) * sin(2.f * M_PI * i / num_steps), cos(sweep_line));
+        }
         glEnd();
+    }
+    else
+    {
+        glLoadIdentity();
+        
+        glRotatef(-90, 1, 0, 0);
+        
+        float angle = SDL_GetTicks() / 50.f;
+        
+        glRotatef(angle, 0, 0, 1);
+    }
+    
+    render_edges_sphere(edges);
+    render_points(points, num_sites, 1, 0, 0);
+    
+    if (beach != NULL) {
+        render_points(beach, beach_size, 1, 1, 0);
     }
     
     SDL_GL_SwapWindow(window);
-    
 }
 
 
@@ -209,10 +213,15 @@ int main(int argc, const char * argv[]) {
      *  1465483717 (1000 sites)
      *  1465495088 (500 sites)
      *  1465505027 (100 sites)
+     *  1465594353 (50 sites)
+     *  1465600782 (1000 sites)
+     *  1465600970 (1000 sites)
+     *  1465605747 (1000 sites) Two sites with same theta (double)
+     *  1465608754 (1000 sites) (double)
      */
     
     unsigned int seed = (unsigned int)time(NULL);
-    //unsigned int seed = 1465505027;
+    //unsigned int seed = 1465594353;
     
     cout << "Seed = " << seed << endl;
     
@@ -223,7 +232,8 @@ int main(int argc, const char * argv[]) {
         return 0;
     }
     
-    window = SDL_CreateWindow("Voronoi", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 500, 500, SDL_WINDOW_OPENGL);
+    const int window_size = 600;
+    window = SDL_CreateWindow("Voronoi", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_size, window_size, SDL_WINDOW_OPENGL);
     
     if(window == NULL)   {
         cout << "Error creating window.\n";
@@ -278,7 +288,7 @@ int main(int argc, const char * argv[]) {
     
     VoronoiSphere voronoi;
     VoronoiDiagramSphere voronoi_diagram = voronoi.generate_voronoi(points, num_sites, render_sphere, sleep);
-    
+
     cout << "Generated voronoi from " << num_sites << " sites in " << (clock() - t) / (float)CLOCKS_PER_SEC << " seconds.\n";
     
 #else

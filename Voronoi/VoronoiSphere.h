@@ -16,7 +16,6 @@
 
 namespace Voronoi
 {
-    
     class VoronoiSphere;
     struct PointSphere;
     struct PointCartesian;
@@ -26,8 +25,7 @@ namespace Voronoi
     
     struct PointCartesian
     {
-        
-        PointCartesian(float a = 0, float b = 0, float c = 0) : x(a), y(b), z(c) {}
+        PointCartesian(double a = 0, double b = 0, double c = 0) : x(a), y(b), z(c) {}
                 
         friend PointCartesian operator-(const PointCartesian left, const PointCartesian right) {return PointCartesian(left.x - right.x, left.y - right.y, left.z - right.z);}
         
@@ -35,27 +33,34 @@ namespace Voronoi
         
         void normalize()
         {
-            float r = sqrt(x*x + y*y + z*z);
-            x /= r;
-            y /= r;
-            z /= r;
+            double r = sqrt(x*x + y*y + z*z);
+            if (r == 0)
+            {
+                x = y = z = 0;
+            }
+            else
+            {
+                x /= r;
+                y /= r;
+                z /= r;
+            }
         }
         
-        void to_unit_sphere(float & theta, float & phi)
+        void to_unit_sphere(double & theta, double & phi)
         {
             theta = acos(z);
             phi = atan2(y, x);
         }
         
-        static PointCartesian cross_product(PointCartesian left, PointCartesian right)
+        static PointCartesian cross_product(const PointCartesian & left, const PointCartesian & right)
         {
-            float x = left.y * right.z - left.z * right.y;
-            float y = left.z * right.x - left.x * right.z;
-            float z = left.x * right.y - left.y * right.x;
+            double x = left.y * right.z - left.z * right.y;
+            double y = left.z * right.x - left.x * right.z;
+            double z = left.x * right.y - left.y * right.x;
             return PointCartesian(x, y, z);
         }
         
-        float x, y, z;
+        double x, y, z;
     };
     
     /*
@@ -66,13 +71,13 @@ namespace Voronoi
     struct PointSphere
     {
         
-        float theta, phi;
+        double theta, phi;
         
-        float x, y, z;
+        double x, y, z;
         
-        PointSphere(float t = 0, float p = 0) : theta(t), phi(p), x(0), y(0), z(0), has_cartesian(false) {}
+        PointSphere(double t = 0, double p = 0) : theta(t), phi(p), x(0), y(0), z(0), has_cartesian(false) {}
         
-        PointSphere(float _x, float _y, float _z) : theta(acos(_z)), phi(atan2(_y, _x)), x(_x), y(_y), z(_z), has_cartesian(true) {}
+        PointSphere(double _x, double _y, double _z) : theta(acos(_z)), phi(atan2(_y, _x)), x(_x), y(_y), z(_z), has_cartesian(true) {}
         
         PointSphere(PointCartesian point) : PointSphere(point.x, point.y, point.z) {}
         
@@ -88,7 +93,7 @@ namespace Voronoi
             return PointCartesian(x, y, z);
         }
         
-        static float angle_between(PointSphere a, PointSphere b)
+        static double angle_between(PointSphere & a, PointSphere & b)
         {
             a.set_cartesian();
             b.set_cartesian();
@@ -101,7 +106,7 @@ namespace Voronoi
         {
             if (!has_cartesian)
             {
-                float sin_theta = sin(theta);
+                double sin_theta = sin(theta);
                 x = cos(phi) * sin_theta;
                 y = sin(phi) * sin_theta;
                 z = cos(theta);
@@ -163,7 +168,7 @@ namespace Voronoi
         
     public:
         
-        VoronoiDiagramSphere generate_voronoi(float * points, int num_points, void (*render)(std::vector<HalfEdgeSphere *>, float), void (*sleep)());
+        VoronoiDiagramSphere generate_voronoi(float * points, int num_points, void (*render)(std::vector<HalfEdgeSphere *>, float, float *, int), void (*sleep)());
         
     private:
         
@@ -172,34 +177,31 @@ namespace Voronoi
         struct ArcSphere;
         
         /*
-         *  Sort by theta. Smallest theta should be first
+         *  Sort by theta. Smallest theta should be first.
          */
         struct PriorityQueueCompare
         {
             bool operator()(VoronoiCellSphere * left, VoronoiCellSphere * right) {return left->site > right->site;}
-            //bool operator()(PointSphere & left, PointSphere & right) {return left > right;}
             bool operator()(CircleEventSphere * left, CircleEventSphere * right) {return left->lowest_theta > right->lowest_theta;}
         };
         
         struct CircleEventSphere
         {
             
-            CircleEventSphere(ArcSphere * a, PointSphere c, float l) : arc(a), circumcenter(c), lowest_theta(l), is_valid(true) {}
+            CircleEventSphere(ArcSphere * a, PointSphere c, double l) : arc(a), circumcenter(c), lowest_theta(l), is_valid(true) {}
             
             ArcSphere * arc;
             
             PointSphere circumcenter;
             
-            float lowest_theta;
+            double lowest_theta;
             
             bool is_valid;
         };
         
         struct ArcSphere
         {
-            
             static const int max_skiplist_height = 1;
-
 
             ArcSphere(VoronoiCellSphere * c) : cell(c), event(NULL), s0(NULL), s1(NULL)
             {
@@ -242,6 +244,10 @@ namespace Voronoi
             
             ~ArcSphere()
             {
+                if (event != NULL) {
+                    event->is_valid = false;
+                }
+                
                 for (int i = 0; i < height; i++)
                 {
                     ArcSphere * left = prev[i];
@@ -284,11 +290,11 @@ namespace Voronoi
                 
         bool parabolic_intersection(PointSphere left, PointSphere right, PointSphere & intersection);
         
-        PointSphere phi_to_point(PointSphere arc, float phi);
+        PointSphere phi_to_point(PointSphere arc, double phi);
         
         void check_circle_event(ArcSphere * arc);
         
-        void make_circle(PointSphere a, PointSphere b, PointSphere c, PointSphere & circumcenter, float & lowest_theta);
+        void make_circle(PointSphere a, PointSphere b, PointSphere c, PointSphere & circumcenter, double & lowest_theta);
         
         void finalize_diagram();
         
@@ -296,7 +302,7 @@ namespace Voronoi
         
         ArcSphere * beach_head;
                 
-        float sweep_line;
+        double sweep_line;
         
         VoronoiDiagramSphere voronoi_diagram;
     };
