@@ -21,7 +21,7 @@ using namespace Voronoi;
 SDL_Window * window;
 SDL_Event event;
 
-const int num_sites = 1000;
+const int num_sites = 100;
 
 #ifdef SPHERICAL_MODE
 float points[num_sites * 3];
@@ -31,6 +31,69 @@ float points[num_sites * 2];
 
 const float point_size = 5.f;
 const float line_width = 1.f;
+
+void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram)
+{
+    bool should_rotate = false;
+    bool render_cells = true;
+    bool render_voronoi = true;
+    bool render_delaunay = true;
+ 
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    glPointSize(point_size);
+    glLineWidth(line_width);
+    
+    if (should_rotate)
+    {
+        glLoadIdentity();
+        
+        glRotatef(-90, 1, 0, 0);
+        
+        float angle = SDL_GetTicks() / 50.f;
+        
+        glRotatef(angle, 0, 0, 1);
+    }
+    
+    if (render_voronoi)
+    {
+        glColor3f(1, 1, 0);
+        glBegin(GL_LINES);
+            for (auto edge : voronoi_diagram.edges)
+            {
+                glVertex3f(edge.start.x, edge.start.y, edge.start.z);
+                glVertex3f(edge.end.x, edge.end.y, edge.end.z);
+            }
+        glEnd();
+    }
+    
+    if (render_delaunay)
+    {
+        glColor3f(0, 0, 1);
+        glBegin(GL_LINES);
+        for (auto edge : voronoi_diagram.edges)
+        {
+            PointCartesian start = voronoi_diagram.cells[edge.cell_ids[0]].site.get_cartesian();
+            PointCartesian end = voronoi_diagram.cells[edge.cell_ids[1]].site.get_cartesian();
+            glVertex3f(start.x, start.y, start.z);
+            glVertex3f(end.x, end.y, end.z);
+        }
+        glEnd();
+    }
+    
+    if (render_cells)
+    {
+        glColor3f(1, 0, 0);
+        glBegin(GL_POINTS);
+        for (auto cell : voronoi_diagram.cells)
+        {
+            glVertex3f(cell.site.x, cell.site.y, cell.site.z);
+        }
+        glEnd();
+    }
+    
+    SDL_GL_SwapWindow(window);
+}
 
 void render_points(float * points, int num_points, float r, float g, float b) {
     
@@ -49,7 +112,7 @@ void render_points(float * points, int num_points, float r, float g, float b) {
     glEnd();
 }
 
-void render_edges_sphere(vector<HalfEdgeSphere *> edges) {
+void render_edges_sphere(vector<HalfEdgeSphere> edges) {
     
     glLineWidth(line_width);
     glPointSize(point_size);
@@ -58,8 +121,7 @@ void render_edges_sphere(vector<HalfEdgeSphere *> edges) {
     
     for (int i = 0; i < edges.size(); i++) {
         
-        if (!edges[i]->is_finished) {continue;}
-        if (edges[i]->start == NULL || edges[i]->end == NULL) {continue;}
+        if (!edges[i].is_finished) {continue;}
         
         glColor3f(1.f, 1.f, 0.f);
         
@@ -73,8 +135,8 @@ void render_edges_sphere(vector<HalfEdgeSphere *> edges) {
         
         
         glBegin(GL_LINE_STRIP);
-            glVertex3f(edges[i]->start->x, edges[i]->start->y, edges[i]->start->z);
-            glVertex3f(edges[i]->end->x, edges[i]->end->y, edges[i]->end->z);
+            glVertex3f(edges[i].start.x, edges[i].start.y, edges[i].start.z);
+            glVertex3f(edges[i].end.x, edges[i].end.y, edges[i].end.z);
     
             //for (int i = 0; i < num_segments; i++) {
             //    glColor3f(1.f, (float)i / num_segments, 0.f);
@@ -82,12 +144,6 @@ void render_edges_sphere(vector<HalfEdgeSphere *> edges) {
             //    float phi = phi0 + (phi1 - phi0) * i / num_segments;
             //    glVertex3f(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
             //}
-        glEnd();
-        
-        glColor3f(0, 0, 1);
-        glBegin(GL_LINES);
-            glVertex3f(edges[i]->cells[0]->site.x, edges[i]->cells[0]->site.y, edges[i]->cells[0]->site.z);
-            glVertex3f(edges[i]->cells[1]->site.x, edges[i]->cells[1]->site.y, edges[i]->cells[1]->site.z);
         glEnd();
     }
 }
@@ -115,7 +171,7 @@ void render_edges_2d(vector<HalfEdge2D *> edges) {
     }
 }
 
-void render_sphere(vector<HalfEdgeSphere *> edges, float sweep_line = 0, float * beach = NULL, int beach_size = 0) {
+void render_sphere(vector<HalfEdgeSphere> edges, float sweep_line = 0, float * beach = NULL, int beach_size = 0) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     if (sweep_line != 0)
@@ -130,13 +186,13 @@ void render_sphere(vector<HalfEdgeSphere *> edges, float sweep_line = 0, float *
     }
     else
     {
-        glLoadIdentity();
-        
-        glRotatef(-90, 1, 0, 0);
-        
-        float angle = SDL_GetTicks() / 50.f;
-        
-        glRotatef(angle, 0, 0, 1);
+//        glLoadIdentity();
+//        
+//        glRotatef(-90, 1, 0, 0);
+//        
+//        float angle = SDL_GetTicks() / 50.f;
+//        
+//        glRotatef(angle, 0, 0, 1);
     }
     
     render_edges_sphere(edges);
@@ -205,23 +261,17 @@ int main(int argc, const char * argv[]) {
     
     /*
      *  Bad seeds:
-     *  1465266993 (100 sites) Good!
-     *  1465267176 (100 sites) Good!
-     *  1465267270 (100 sites) Good!
-     *  1465267285 (1000 sites) Good!
-     *  1465483687 (1000 sites)
-     *  1465483717 (1000 sites)
-     *  1465495088 (500 sites)
-     *  1465505027 (100 sites)
-     *  1465594353 (50 sites)
-     *  1465600782 (1000 sites)
-     *  1465600970 (1000 sites)
-     *  1465605747 (1000 sites) Two sites with same theta (double)
-     *  1465608754 (1000 sites) (double)
+     *  1465687667 (5000 sites)
+     *  1465687822 (5000 sites)
+     *  1465689212 (5000 sites)
+     *  1465690738 (10000 sites)
+     *  1465690788 (10000 sites)
+     *  1465709009 (100 sites)
+     *  1465709058 (100 sites)
      */
     
     unsigned int seed = (unsigned int)time(NULL);
-    //unsigned int seed = 1465594353;
+    //seed = 1465691873;
     
     cout << "Seed = " << seed << endl;
     
@@ -300,7 +350,8 @@ int main(int argc, const char * argv[]) {
     while(is_running) {
         
 #ifdef SPHERICAL_MODE
-        render_sphere(voronoi_diagram.edges);
+        //render_sphere(voronoi_diagram.edges);
+        render_voronoi_sphere(voronoi_diagram);
 #else
         render_2d(edges);
 #endif

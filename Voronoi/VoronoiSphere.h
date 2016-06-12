@@ -16,16 +16,20 @@
 
 namespace Voronoi
 {
+    typedef double Real;
+    
     class VoronoiSphere;
     struct PointSphere;
     struct PointCartesian;
     struct HalfEdgeSphere;
     struct VoronoiCellSphere;
     struct VoronoiDiagramSphere;
+    struct ArcSphere;
+    struct CircleEventSphere;
     
     struct PointCartesian
     {
-        PointCartesian(double a = 0, double b = 0, double c = 0) : x(a), y(b), z(c) {}
+        PointCartesian(Real a = 0, Real b = 0, Real c = 0) : x(a), y(b), z(c) {}
                 
         friend PointCartesian operator-(const PointCartesian left, const PointCartesian right) {return PointCartesian(left.x - right.x, left.y - right.y, left.z - right.z);}
         
@@ -33,9 +37,10 @@ namespace Voronoi
         
         void normalize()
         {
-            double r = sqrt(x*x + y*y + z*z);
+            Real r = sqrt(x*x + y*y + z*z);
             if (r == 0)
             {
+                std::cout << "r = 0\n";
                 x = y = z = 0;
             }
             else
@@ -46,21 +51,15 @@ namespace Voronoi
             }
         }
         
-        void to_unit_sphere(double & theta, double & phi)
-        {
-            theta = acos(z);
-            phi = atan2(y, x);
-        }
-        
         static PointCartesian cross_product(const PointCartesian & left, const PointCartesian & right)
         {
-            double x = left.y * right.z - left.z * right.y;
-            double y = left.z * right.x - left.x * right.z;
-            double z = left.x * right.y - left.y * right.x;
+            Real x = left.y * right.z - left.z * right.y;
+            Real y = left.z * right.x - left.x * right.z;
+            Real z = left.x * right.y - left.y * right.x;
             return PointCartesian(x, y, z);
         }
         
-        double x, y, z;
+        Real x, y, z;
     };
     
     /*
@@ -71,13 +70,13 @@ namespace Voronoi
     struct PointSphere
     {
         
-        double theta, phi;
+        Real theta, phi;
         
-        double x, y, z;
+        Real x, y, z;
         
-        PointSphere(double t = 0, double p = 0) : theta(t), phi(p), x(0), y(0), z(0), has_cartesian(false) {}
+        PointSphere(Real t = 0, Real p = 0) : theta(t), phi(p), x(0), y(0), z(0), has_cartesian(false) {}
         
-        PointSphere(double _x, double _y, double _z) : theta(acos(_z)), phi(atan2(_y, _x)), x(_x), y(_y), z(_z), has_cartesian(true) {}
+        PointSphere(Real _x, Real _y, Real _z) : theta(acos(_z)), phi(atan2(_y, _x)), x(_x), y(_y), z(_z), has_cartesian(true) {}
         
         PointSphere(PointCartesian point) : PointSphere(point.x, point.y, point.z) {}
         
@@ -93,7 +92,7 @@ namespace Voronoi
             return PointCartesian(x, y, z);
         }
         
-        static double angle_between(PointSphere & a, PointSphere & b)
+        static Real angle_between(PointSphere & a, PointSphere & b)
         {
             a.set_cartesian();
             b.set_cartesian();
@@ -106,7 +105,7 @@ namespace Voronoi
         {
             if (!has_cartesian)
             {
-                double sin_theta = sin(theta);
+                Real sin_theta = sin(theta);
                 x = cos(phi) * sin_theta;
                 y = sin(phi) * sin_theta;
                 z = cos(theta);
@@ -119,25 +118,54 @@ namespace Voronoi
     
     struct VoronoiCellSphere
     {
+        VoronoiCellSphere(PointSphere point, int _id) : site(point), cell_id(_id) {}
         
-        VoronoiCellSphere(PointSphere point) : site(point) {}
-        
-        VoronoiCellSphere(PointCartesian point) : site(point) {}
+        VoronoiCellSphere(PointCartesian point, int _id) : site(point), cell_id(_id) {}
         
         PointSphere site;
         
-        std::vector<HalfEdgeSphere *> edges;
+        std::vector<int> edge_ids;
+        
+        int cell_id;
+    };
+    
+    struct ArcSphere
+    {        
+        ArcSphere(int _cell_id, int _height) : cell_id(_cell_id), height(_height), event(NULL), left_edge_id(-1), right_edge_id(-1) {}
+        
+        int cell_id;
+        
+        int height;
+        
+        ArcSphere **prev, **next;
+        
+        CircleEventSphere * event;
+        
+        int left_edge_id, right_edge_id;
+    };
+    
+    struct CircleEventSphere
+    {
+        CircleEventSphere(ArcSphere * a, PointSphere c, Real l) : arc(a), circumcenter(c), lowest_theta(l), is_valid(true) {}
+        
+        ArcSphere * arc;
+        
+        PointSphere circumcenter;
+        
+        Real lowest_theta;
+        
+        bool is_valid;
     };
     
     struct HalfEdgeSphere
     {
-        HalfEdgeSphere(PointCartesian * s, VoronoiCellSphere * a, VoronoiCellSphere * b) : start(s), end(NULL), is_finished(false)
+        HalfEdgeSphere(PointCartesian s, int left_cell_id, int right_cell_id) : start(s), is_finished(false)
         {
-            cells[0] = a;
-            cells[1] = b;
+            cell_ids[0] = left_cell_id;
+            cell_ids[1] = right_cell_id;
         }
         
-        void finish(PointCartesian * e)
+        void finish(PointCartesian e)
         {
             if (!is_finished)
             {
@@ -146,165 +174,80 @@ namespace Voronoi
             }
         }
         
-        PointCartesian *start, *end;
+        PointCartesian start, end;
         
-        VoronoiCellSphere * cells[2];
+        int cell_ids[2];
         
         bool is_finished;
     };
     
     struct VoronoiDiagramSphere
     {
-        std::vector<HalfEdgeSphere *> edges;
+        std::vector<HalfEdgeSphere> edges;
         
-        std::vector<PointCartesian *> verticies;
-        
-        std::vector<VoronoiCellSphere *> cells;
+        std::vector<VoronoiCellSphere> cells;
     };
     
     
     class VoronoiSphere
     {
-        
     public:
         
-        VoronoiDiagramSphere generate_voronoi(float * points, int num_points, void (*render)(std::vector<HalfEdgeSphere *>, float, float *, int), void (*sleep)());
+        VoronoiDiagramSphere generate_voronoi(float * points, int num_points, void (*render)(std::vector<HalfEdgeSphere>, float, float *, int), void (*sleep)());
         
     private:
         
         struct PriorityQueueCompare;
-        struct CircleEventSphere;
-        struct ArcSphere;
         
         /*
          *  Sort by theta. Smallest theta should be first.
          */
         struct PriorityQueueCompare
         {
-            bool operator()(VoronoiCellSphere * left, VoronoiCellSphere * right) {return left->site > right->site;}
+            bool operator()(VoronoiCellSphere & left, VoronoiCellSphere & right) {return left.site > right.site;}
             bool operator()(CircleEventSphere * left, CircleEventSphere * right) {return left->lowest_theta > right->lowest_theta;}
         };
         
-        struct CircleEventSphere
-        {
-            
-            CircleEventSphere(ArcSphere * a, PointSphere c, double l) : arc(a), circumcenter(c), lowest_theta(l), is_valid(true) {}
-            
-            ArcSphere * arc;
-            
-            PointSphere circumcenter;
-            
-            double lowest_theta;
-            
-            bool is_valid;
-        };
+        int max_skiplist_height;
         
-        struct ArcSphere
-        {
-            static const int max_skiplist_height = 1;
+        ArcSphere * beach_head;
+        
+        Real sweep_line;
+        
+        VoronoiDiagramSphere voronoi_diagram;
+        
+        VoronoiCellSphere *first_cell, *second_cell;
+        
+        std::priority_queue<VoronoiCellSphere, std::vector<VoronoiCellSphere>, PriorityQueueCompare> site_event_queue;
 
-            ArcSphere(VoronoiCellSphere * c) : cell(c), event(NULL), s0(NULL), s1(NULL)
-            {
-                height = (rand() % max_skiplist_height) + 1;
-                
-                prev = new ArcSphere*[height];
-                next = new ArcSphere*[height];
-                
-                for (int i = 0; i < height; i++)
-                {
-                    prev[i] = next[i] = this;
-                }
-            }
-            
-            ArcSphere(VoronoiCellSphere * c, ArcSphere * left, ArcSphere * right) : cell(c), event(NULL), s0(NULL), s1(NULL)
-            {
-                height = (rand() % max_skiplist_height) + 1;
-                
-                prev = new ArcSphere*[height];
-                next = new ArcSphere*[height];
-                
-                for (int i = 0; i < height; i++)
-                {
-                    while (left->height <= i)
-                    {
-                        left = left->prev[left->height - 1];
-                    }
-                    while (right->height <= i)
-                    {
-                        right = right->next[right->height - 1];
-                    }
-                    
-                    left->next[i] = this;
-                    prev[i] = left;
-                    
-                    right->prev[i] = this;
-                    next[i] = right;
-                }
-            }
-            
-            ~ArcSphere()
-            {
-                if (event != NULL) {
-                    event->is_valid = false;
-                }
-                
-                for (int i = 0; i < height; i++)
-                {
-                    ArcSphere * left = prev[i];
-                    left->next[i] = next[i];
-                    next[i]->prev[i] = left;
-                }
-                
-                delete [] prev;
-                delete [] next;
-            }
-            
-            void add_edge_left(HalfEdgeSphere * edge)
-            {
-                s0 = edge;
-                cell->edges.push_back(edge);
-                //maybe add cell to edge
-            }
-            
-            void add_edge_right(HalfEdgeSphere * edge)
-            {
-                s1 = edge;
-                cell->edges.push_back(edge);
-                //maybe add cell to edge
-            }
-            
-            VoronoiCellSphere * cell;
-            
-            ArcSphere **prev, **next;
-            
-            CircleEventSphere * event;
-            
-            HalfEdgeSphere *s0, *s1;
-            
-            int height;
-        };
+        std::priority_queue<CircleEventSphere *, std::vector<CircleEventSphere *>, PriorityQueueCompare> circle_event_queue;
 
-        void handle_site_event(VoronoiCellSphere * cell);
+        
+        
+        void handle_site_event(VoronoiCellSphere & cell);
         
         void handle_circle_event(CircleEventSphere * event);
                 
         bool parabolic_intersection(PointSphere left, PointSphere right, PointSphere & intersection);
         
-        PointSphere phi_to_point(PointSphere arc, double phi);
+        PointSphere phi_to_point(PointSphere arc, Real phi);
         
         void check_circle_event(ArcSphere * arc);
         
-        void make_circle(PointSphere a, PointSphere b, PointSphere c, PointSphere & circumcenter, double & lowest_theta);
+        void make_circle(PointSphere a, PointSphere b, PointSphere c, PointSphere & circumcenter, Real & lowest_theta);
+        
+        void initialize_diagram(float * points, int num_points);
         
         void finalize_diagram();
         
-        std::priority_queue<CircleEventSphere, std::vector<CircleEventSphere *>, PriorityQueueCompare> circle_event_queue;
+        void add_half_edge_sphere(PointCartesian p, ArcSphere * left, ArcSphere * right);
         
-        ArcSphere * beach_head;
-                
-        double sweep_line;
+        void add_initial_arc_sphere(int cell_id);
         
-        VoronoiDiagramSphere voronoi_diagram;
+        void add_arc_sphere(int cell_id, ArcSphere * left, ArcSphere * right);
+        
+        void remove_arc_sphere(ArcSphere * arc);
+
     };
 }
 
