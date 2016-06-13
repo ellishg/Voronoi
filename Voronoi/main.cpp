@@ -21,7 +21,7 @@ using namespace Voronoi;
 SDL_Window * window;
 SDL_Event event;
 
-const int num_sites = 100;
+const int num_sites = 16000;
 
 #ifdef SPHERICAL_MODE
 float points[num_sites * 3];
@@ -29,12 +29,12 @@ float points[num_sites * 3];
 float points[num_sites * 2];
 #endif
 
-const float point_size = 5.f;
+const float point_size = 2.f;
 const float line_width = 1.f;
 
 void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram)
 {
-    bool should_rotate = false;
+    bool should_rotate = true;
     bool render_cells = true;
     bool render_voronoi = true;
     bool render_delaunay = true;
@@ -266,12 +266,10 @@ int main(int argc, const char * argv[]) {
      *  1465689212 (5000 sites)
      *  1465690738 (10000 sites)
      *  1465690788 (10000 sites)
-     *  1465709009 (100 sites)
-     *  1465709058 (100 sites)
      */
     
     unsigned int seed = (unsigned int)time(NULL);
-    //seed = 1465691873;
+    seed = 1465837530;
     
     cout << "Seed = " << seed << endl;
     
@@ -320,11 +318,12 @@ int main(int argc, const char * argv[]) {
         float x = (rand() % precision) / (float)precision - 0.5f;
         float y = (rand() % precision) / (float)precision - 0.5f;
         float z = (rand() % precision) / (float)precision - 0.5f;
+        //cout << "(" << x<< ", " << y << ", " << z << ")\n";
+
         float r = sqrt(x*x + y*y + z*z);
         points[3 * i] = x / r;
         points[3 * i + 1] = y / r;
         points[3 * i + 2] = z / r;
-        //cout << "(" << points[3 * i] << ", " << points[3 * i + 1] << ", " << points[3 * i + 2] << ")\n";
 #else
         points[2 * i] = (rand() % precision) / (float)precision;
         points[2 * i + 1] = (rand() % precision) / (float)precision;

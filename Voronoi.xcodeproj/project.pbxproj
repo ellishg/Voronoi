@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		E70463321CFF9AB0003197CA /* Voronoi2D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E70463301CFF9AB0003197CA /* Voronoi2D.cpp */; };
 		E70463351D0223D9003197CA /* VoronoiSphere.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E70463331D0223D9003197CA /* VoronoiSphere.cpp */; };
+		E7AE3CEF1D0F14020083B29C /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E7AE3CEE1D0F14020083B29C /* main.cpp */; };
+		E7AE3CF31D0F16310083B29C /* VoronoiSphere.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E70463331D0223D9003197CA /* VoronoiSphere.cpp */; };
 		E7C4C04E1D09B3830036350B /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = E7C4C04D1D09B3830036350B /* README.md */; };
 		E7F6CA521CFF8E7A00B47D59 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E7F6CA511CFF8E7A00B47D59 /* main.cpp */; };
 		E7F6CA591CFF8F6A00B47D59 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E7F6CA581CFF8F6A00B47D59 /* SDL2.framework */; };
@@ -16,6 +18,15 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		E7AE3CEA1D0F14020083B29C /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 		E7F6CA4C1CFF8E7A00B47D59 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -32,6 +43,8 @@
 		E70463311CFF9AB0003197CA /* Voronoi2D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Voronoi2D.h; sourceTree = "<group>"; };
 		E70463331D0223D9003197CA /* VoronoiSphere.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VoronoiSphere.cpp; sourceTree = "<group>"; };
 		E70463341D0223D9003197CA /* VoronoiSphere.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VoronoiSphere.h; sourceTree = "<group>"; };
+		E7AE3CEC1D0F14020083B29C /* speed_test */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = speed_test; sourceTree = BUILT_PRODUCTS_DIR; };
+		E7AE3CEE1D0F14020083B29C /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		E7C4C04D1D09B3830036350B /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
 		E7F6CA4E1CFF8E7A00B47D59 /* Voronoi */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Voronoi; sourceTree = BUILT_PRODUCTS_DIR; };
 		E7F6CA511CFF8E7A00B47D59 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
@@ -40,6 +53,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		E7AE3CE91D0F14020083B29C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E7F6CA4B1CFF8E7A00B47D59 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -52,6 +72,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		E7AE3CED1D0F14020083B29C /* speed_test */ = {
+			isa = PBXGroup;
+			children = (
+				E7AE3CEE1D0F14020083B29C /* main.cpp */,
+			);
+			path = speed_test;
+			sourceTree = "<group>";
+		};
 		E7F6CA451CFF8E7A00B47D59 = {
 			isa = PBXGroup;
 			children = (
@@ -59,6 +87,7 @@
 				E7F6CA5A1CFF90AE00B47D59 /* OpenGL.framework */,
 				E7F6CA581CFF8F6A00B47D59 /* SDL2.framework */,
 				E7F6CA501CFF8E7A00B47D59 /* Voronoi */,
+				E7AE3CED1D0F14020083B29C /* speed_test */,
 				E7F6CA4F1CFF8E7A00B47D59 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -67,6 +96,7 @@
 			isa = PBXGroup;
 			children = (
 				E7F6CA4E1CFF8E7A00B47D59 /* Voronoi */,
+				E7AE3CEC1D0F14020083B29C /* speed_test */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -86,6 +116,23 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		E7AE3CEB1D0F14020083B29C /* speed_test */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E7AE3CF21D0F14020083B29C /* Build configuration list for PBXNativeTarget "speed_test" */;
+			buildPhases = (
+				E7AE3CE81D0F14020083B29C /* Sources */,
+				E7AE3CE91D0F14020083B29C /* Frameworks */,
+				E7AE3CEA1D0F14020083B29C /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = speed_test;
+			productName = speed_test;
+			productReference = E7AE3CEC1D0F14020083B29C /* speed_test */;
+			productType = "com.apple.product-type.tool";
+		};
 		E7F6CA4D1CFF8E7A00B47D59 /* Voronoi */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = E7F6CA551CFF8E7A00B47D59 /* Build configuration list for PBXNativeTarget "Voronoi" */;
@@ -112,6 +159,9 @@
 				LastUpgradeCheck = 0730;
 				ORGANIZATIONNAME = "Ellis Sparky Hoag";
 				TargetAttributes = {
+					E7AE3CEB1D0F14020083B29C = {
+						CreatedOnToolsVersion = 7.3;
+					};
 					E7F6CA4D1CFF8E7A00B47D59 = {
 						CreatedOnToolsVersion = 7.3;
 					};
@@ -130,11 +180,21 @@
 			projectRoot = "";
 			targets = (
 				E7F6CA4D1CFF8E7A00B47D59 /* Voronoi */,
+				E7AE3CEB1D0F14020083B29C /* speed_test */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		E7AE3CE81D0F14020083B29C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E7AE3CF31D0F16310083B29C /* VoronoiSphere.cpp in Sources */,
+				E7AE3CEF1D0F14020083B29C /* main.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E7F6CA4A1CFF8E7A00B47D59 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -149,6 +209,30 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		E7AE3CF01D0F14020083B29C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				OTHER_CFLAGS = "";
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-Ofast",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		E7AE3CF11D0F14020083B29C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				OTHER_CFLAGS = "";
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-Ofast",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		E7F6CA531CFF8E7A00B47D59 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -255,6 +339,14 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		E7AE3CF21D0F14020083B29C /* Build configuration list for PBXNativeTarget "speed_test" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E7AE3CF01D0F14020083B29C /* Debug */,
+				E7AE3CF11D0F14020083B29C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
 		E7F6CA491CFF8E7A00B47D59 /* Build configuration list for PBXProject "Voronoi" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

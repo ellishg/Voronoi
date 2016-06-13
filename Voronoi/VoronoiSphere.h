@@ -193,9 +193,12 @@ namespace Voronoi
     {
     public:
         
-        VoronoiDiagramSphere generate_voronoi(float * points, int num_points, void (*render)(std::vector<HalfEdgeSphere>, float, float *, int), void (*sleep)());
+        VoronoiDiagramSphere generate_voronoi(float * points, int num_points, void (*render)(std::vector<HalfEdgeSphere>, float, float *, int) = NULL, void (*sleep)() = NULL);
         
     private:
+        
+        const int max_skiplist_height = 15;
+        const int skip_list_height_probability = 2;
         
         struct PriorityQueueCompare;
         
@@ -208,23 +211,19 @@ namespace Voronoi
             bool operator()(CircleEventSphere * left, CircleEventSphere * right) {return left->lowest_theta > right->lowest_theta;}
         };
         
-        int max_skiplist_height;
-        
         ArcSphere * beach_head;
         
         Real sweep_line;
         
         VoronoiDiagramSphere voronoi_diagram;
-        
-        VoronoiCellSphere *first_cell, *second_cell;
-        
+                
         std::priority_queue<VoronoiCellSphere, std::vector<VoronoiCellSphere>, PriorityQueueCompare> site_event_queue;
 
         std::priority_queue<CircleEventSphere *, std::vector<CircleEventSphere *>, PriorityQueueCompare> circle_event_queue;
 
         
         
-        void handle_site_event(VoronoiCellSphere & cell);
+        void handle_site_event(VoronoiCellSphere cell);
         
         void handle_circle_event(CircleEventSphere * event);
                 
@@ -246,7 +245,11 @@ namespace Voronoi
         
         void add_arc_sphere(int cell_id, ArcSphere * left, ArcSphere * right);
         
+        int random_height();
+        
         void remove_arc_sphere(ArcSphere * arc);
+        
+        ArcSphere * traverse_skiplist_to_site(ArcSphere * arc, Real phi);
 
     };
 }

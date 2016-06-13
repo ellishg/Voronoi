@@ -50,7 +50,7 @@ VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_poi
                 } while (cur != beach_head);
                 render(voronoi_diagram.edges, sweep_line, p, i);
                 delete [] p;
-                sleep();
+                //sleep();
             }
         }
         else
@@ -76,7 +76,7 @@ VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_poi
                 } while (cur != beach_head);
                 render(voronoi_diagram.edges, sweep_line, p, i);
                 delete [] p;
-                sleep();
+                //sleep();
             }
         }
     }
@@ -87,11 +87,7 @@ VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_poi
 }
 
 void VoronoiSphere::initialize_diagram(float * points, int num_points)
-{
-    max_skiplist_height = 10;
-    
-    first_cell = second_cell = NULL;
-    
+{    
     beach_head = NULL;
     sweep_line = 0;
     voronoi_diagram.edges.clear();
@@ -119,8 +115,6 @@ void VoronoiSphere::initialize_diagram(float * points, int num_points)
 
 void VoronoiSphere::finalize_diagram()
 {
-    //last two arcs in the beach need to be connected?
-
     for (int i = 0; i < voronoi_diagram.edges.size(); i++)
     {
         if (!voronoi_diagram.edges[i].is_finished)
@@ -138,7 +132,7 @@ void VoronoiSphere::finalize_diagram()
     }
 }
 
-void VoronoiSphere::handle_site_event(VoronoiCellSphere & cell)
+void VoronoiSphere::handle_site_event(VoronoiCellSphere cell)
 {
     //cout << "Handle site event.\n";
     
@@ -151,35 +145,39 @@ void VoronoiSphere::handle_site_event(VoronoiCellSphere & cell)
     {
         add_arc_sphere(cell.cell_id, beach_head, beach_head);
         
-        //first_cell = beach_head->cell;
-        //second_cell = beach_head->next[0]->cell;
-        
         beach_head->next[0]->left_edge_id = beach_head->right_edge_id;
         beach_head->next[0]->right_edge_id = beach_head->left_edge_id;
+        
+        PointSphere cur_site = voronoi_diagram.cells[beach_head->cell_id].site;
+
+        //insert new vertex
+        // This is not really a vertex. It is the center of some edge.
+        PointCartesian vertex = phi_to_point(cur_site, cell.site.phi).get_cartesian();
+        
+        add_half_edge_sphere(vertex, beach_head, beach_head->next[0]);
+        add_half_edge_sphere(vertex, beach_head->prev[0], beach_head);
         
         return;
     }
     
-    ArcSphere * arc = beach_head;
-    
-    int level = arc->height - 1;
+    ArcSphere * arc = traverse_skiplist_to_site(beach_head, cell.site.phi);
     
     do {
-        
         PointSphere cur_site = voronoi_diagram.cells[arc->cell_id].site;
         PointSphere prev_site = voronoi_diagram.cells[arc->prev[0]->cell_id].site;
         PointSphere next_site = voronoi_diagram.cells[arc->next[0]->cell_id].site;
         
-        if (cur_site.phi == cell.site.phi) {
-            cout << "Two sites have the same phi!\n";
-        }
-        if (cur_site.theta == cell.site.theta) {
-            cout << "Two sites have the same theta!\n";
-        }
+//        if (cur_site.phi == cell.site.phi) {
+//            cout << "Two sites have the same phi!\n";
+//        }
+//        if (cur_site.theta == cell.site.theta) {
+//            cout << "Two sites have the same theta!\n";
+//        }
         
         PointSphere left_intersection, right_intersection;
         
-        Real phi_start, phi_end;
+        Real phi_start = 0;
+        Real phi_end = 0;
         
         bool valid_arc = true;
         
@@ -236,21 +234,14 @@ void VoronoiSphere::handle_site_event(VoronoiCellSphere & cell)
             
             return;
         }
-        else if (phi_start == cell.site.phi || phi_end == cell.site.phi)
-        {
-            cout << "Three arcs intersect in the same place.\n";
-        }
+//        else if (phi_start == cell.site.phi || phi_end == cell.site.phi)
+//        {
+//            cout << "Three arcs intersect in the same place.\n";
+//        }
         
-        //arc = arc->next[0];
-        
-        //if (arc->location.phi < site.phi) {
-        //    arc = arc->next[level - 1];
-        //}
-        //else {
-        //    arc = arc->prev[level - 1];
-        //}
-        arc = arc->next[level];
-        level = max(0, level - 1);
+        arc = arc->next[0];
+        //arc = arc->next[level];
+        //level = max(0, level - 1);
         
     } while (true);
 }
@@ -403,11 +394,11 @@ bool VoronoiSphere::parabolic_intersection(PointSphere left, PointSphere right, 
 
 PointSphere VoronoiSphere::phi_to_point(PointSphere arc, Real phi)
 {
-    if (arc.theta >= sweep_line)
-    {
-        cout << "This shouldn't happen.\n";
-        return PointSphere(sweep_line, phi);
-    }
+//    if (arc.theta >= sweep_line)
+//    {
+//        cout << "This shouldn't happen.\n";
+//        return PointSphere(sweep_line, phi);
+//    }
     Real a = cos(sweep_line) - cos(arc.theta);
     Real b = sin(arc.theta) * cos(phi - arc.phi) - sin(sweep_line);
     return PointSphere(atan2(-a, -b), phi);
@@ -415,8 +406,8 @@ PointSphere VoronoiSphere::phi_to_point(PointSphere arc, Real phi)
 
 void VoronoiSphere::add_initial_arc_sphere(int cell_id)
 {    
-    int height = (rand() % max_skiplist_height) + 1;
- 
+    int height = random_height();
+    
     beach_head = new ArcSphere(cell_id, height);
     
     beach_head->prev = new ArcSphere*[height];
@@ -430,8 +421,8 @@ void VoronoiSphere::add_initial_arc_sphere(int cell_id)
 
 void VoronoiSphere::add_arc_sphere(int cell_id, ArcSphere * left, ArcSphere * right)
 {
-    int height = (rand() % max_skiplist_height) + 1;
- 
+    int height = random_height();
+    
     ArcSphere * arc = new ArcSphere(cell_id, height);
 
     arc->prev = new ArcSphere*[height];
@@ -495,3 +486,102 @@ void VoronoiSphere::add_half_edge_sphere(PointCartesian start, ArcSphere * left,
     right->left_edge_id = edge_id;
 }
 
+ArcSphere * VoronoiSphere::traverse_skiplist_to_site(ArcSphere * arc, Real phi)
+{
+    int level = arc->height - 1;
+    
+    bool move_right = true;
+    
+    while (level >= 0)
+    {
+        Real delta = fabs(phi - voronoi_diagram.cells[arc->cell_id].site.phi);
+        if (delta > M_PI) {delta = 2.f * M_PI - delta;}
+        
+        Real next_delta = fabs(phi - voronoi_diagram.cells[arc->next[level]->cell_id].site.phi);
+        if (next_delta > M_PI) {delta = 2.f * M_PI - next_delta;}
+
+        Real prev_delta = fabs(phi - voronoi_diagram.cells[arc->prev[level]->cell_id].site.phi);
+        if (prev_delta > M_PI) {delta = 2.f * M_PI - prev_delta;}
+
+        if (next_delta < delta && prev_delta > delta)
+        {
+            arc = arc->next[level];
+            if (!move_right) {level--;}
+            move_right = true;
+        }
+        else if (prev_delta < delta && next_delta > delta)
+        {
+            arc = arc->prev[level];
+            if (move_right) {level--;}
+            move_right = false;
+        }
+        else// if (next_delta >= delta && prev_delta >= delta)
+        {
+            level--;
+        }
+    }
+    return arc->prev[0];
+}
+
+int VoronoiSphere::random_height()
+{
+    int r = rand() % 32767;
+    
+    if (r < 16384)
+    {
+        return 1;
+    }
+    else if (r < 24576)
+    {
+        return 2;
+    }
+    else if (r < 28672)
+    {
+        return 3;
+    }
+    else if (r < 30720)
+    {
+        return 4;
+    }
+    else if (r < 31744)
+    {
+        return 5;
+    }
+    else if (r < 32256)
+    {
+        return 6;
+    }
+    else if (r < 32512)
+    {
+        return 7;
+    }
+    else if (r < 32640)
+    {
+        return 8;
+    }
+    else if (r < 32704)
+    {
+        return 9;
+    }
+    else if (r < 32736)
+    {
+        return 10;
+    }
+    else if (r < 32752)
+    {
+        return 11;
+    }
+    else if (r < 32760)
+    {
+        return 12;
+    }
+    else if (r < 32764)
+    {
+        return 13;
+    }
+    else if (r < 32766)
+    {
+        return 14;
+    }
+    return 15;
+}
