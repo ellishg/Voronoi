@@ -1,4 +1,4 @@
-//
+ //
 //  VoronoiSphere.cpp
 //  Voronoi
 //
@@ -167,46 +167,18 @@ void VoronoiSphere::handle_site_event(VoronoiCellSphere cell)
         PointSphere cur_site = voronoi_diagram.cells[arc->cell_id].site;
         PointSphere prev_site = voronoi_diagram.cells[arc->prev[0]->cell_id].site;
         PointSphere next_site = voronoi_diagram.cells[arc->next[0]->cell_id].site;
-        
-        if (cur_site.phi == cell.site.phi) {
-            cout << "Two sites have the same phi!\n";
-        }
-        if (cur_site.theta == cell.site.theta) {
-            cout << "Two sites have the same theta!\n";
-        }
-        
-        PointSphere left_intersection, right_intersection;
-        
+
         Real phi_start = 0;
         Real phi_end = 0;
         
-        bool valid_arc = true;
+        bool valid_arc = parabolic_intersection(prev_site, cur_site, phi_start) && parabolic_intersection(cur_site, next_site, phi_end);
         
-        if (parabolic_intersection(prev_site, cur_site, left_intersection))
+        if (!valid_arc && ((prev_site.phi < next_site.phi && prev_site.phi <= cell.site.phi && cell.site.phi <= next_site.phi) || (prev_site.phi > next_site.phi && (prev_site.phi <= cell.site.phi || cell.site.phi <= next_site.phi))))
         {
-            phi_start = left_intersection.phi;
+            cout << "No intersection.\n";
+            assert(0);
         }
-        else
-        {
-            //cout << arc->prev[0]->cell->site << arc->cell->site << sweep_line << endl << endl;
-            valid_arc = false;
-            cout << "No left intersection.\n";
-            //phi_start = arc->cell->site.phi - M_PI;
-        }
-        if (parabolic_intersection(cur_site, next_site, right_intersection))
-        {
-            phi_end = right_intersection.phi;
-        }
-        else
-        {
-            //valid_arc = false;
-            cout << "No right intersection.\n";
-            //phi_end = arc->cell->site.phi + M_PI;
-        }
-        
-        //cout << phi_start << ", " << cell.site.phi << ", " << phi_end << "\n";
-        
-        if (valid_arc && ((phi_start < phi_end && phi_start <= cell.site.phi && cell.site.phi <= phi_end) || (phi_start > phi_end && (phi_start <= cell.site.phi || cell.site.phi <= phi_end))))
+         if (valid_arc && ((phi_start < phi_end && phi_start <= cell.site.phi && cell.site.phi <= phi_end) || (phi_start > phi_end && (phi_start <= cell.site.phi || cell.site.phi <= phi_end))))
         {
             //arc is found
             
@@ -326,22 +298,41 @@ void VoronoiSphere::make_circle(PointSphere a, PointSphere b, PointSphere c, Poi
     lowest_theta = circumcenter.theta + radius;
 }
 
-bool VoronoiSphere::parabolic_intersection(PointSphere left, PointSphere right, PointSphere & intersection)
+bool VoronoiSphere::parabolic_intersection(PointSphere left, PointSphere right, Real & phi_intersection)
 {
-    if (left.theta >= sweep_line && right.theta >= sweep_line)
+    if (left.theta == sweep_line && right.theta == sweep_line)
     {
+        /*
+         *  Both sites are on the sweep line so our intersection is at the north pole.
+         *  We need to handle this special case.
+         */
         return false;
     }
-    else if (left.theta >= sweep_line && right.theta < sweep_line)
+    else if (left.theta == sweep_line && right.theta < sweep_line)
     {
-        cout << "hi";
-        intersection = phi_to_point(right, left.phi);
+        /*
+         *  The left site is on our sweep line so it contains our intersection phi.
+         */
+        phi_intersection = left.phi;
+        //cout << "No left intersection.\n" << left << right << sweep_line << endl;
         return true;
     }
-    else if (right.theta >= sweep_line && left.theta < sweep_line)
+    else if (right.theta == sweep_line && left.theta < sweep_line)
     {
-        cout << "Hello";
-        intersection = phi_to_point(left, right.phi);
+        /*
+         *  The right site is on our sweep line so it contains our intersection phi.
+         *  If the beachline contains exactly two arcs then our intersection phi is
+         *  on the other side of our sphere.
+         */
+        if (beach_head == beach_head->next[0]->next[0])
+        {
+            phi_intersection = right.phi + ((right.phi > 0) ? M_PI : -M_PI);
+        }
+        else
+        {
+            phi_intersection = right.phi;
+        }
+        //cout << "No right intersection.\n" << left << right << sweep_line << endl;
         return true;
     }
     
@@ -365,40 +356,42 @@ bool VoronoiSphere::parabolic_intersection(PointSphere left, PointSphere right, 
     
     if (fabs(e) > sqrt_a_b)
     {
-        // out of range of sine
-        //cout << "No intersection.\n";
-        return false;
+        /*
+         *  This excecutes when a site is close enought to the sweep line
+         *  to cause problems. So one of the parabolas is actually a line.
+         *  The lower site contains the phi of our intersection.
+         */
+        phi_intersection = (left.theta > right.theta) ? left.phi : right.phi;
+        return true;
     }
     
     Real sin_phi_int_plus_gamma = e / sqrt_a_b;
     
     Real gamma = atan2(a, b);
     
-    Real phi_int = asin(sin_phi_int_plus_gamma) - gamma;
+    phi_intersection = asin(sin_phi_int_plus_gamma) - gamma;
     
-    intersection = phi_to_point(left, phi_int);
-    
-    if (intersection.phi > M_PI)
+    if (phi_intersection > M_PI)
     {
-        intersection.phi -= 2 * M_PI;
+        phi_intersection -= 2 * M_PI;
     }
-    else if (intersection.phi < -M_PI)
+    else if (phi_intersection < -M_PI)
     {
-        intersection.phi += 2 * M_PI;
+        phi_intersection += 2 * M_PI;
     }
     return true;
 }
 
 PointSphere VoronoiSphere::phi_to_point(PointSphere arc, Real phi)
 {
-    if (arc.theta >= sweep_line)
-    {
-        cout << "This shouldn't happen.\n";
-        return PointSphere(sweep_line, phi);
-    }
-    Real a = cos(sweep_line) - cos(arc.theta);
-    Real b = sin(arc.theta) * cos(phi - arc.phi) - sin(sweep_line);
-    return PointSphere(atan2(-a, -b), phi);
+//    if (arc.theta >= sweep_line)
+//    {
+//        cout << "This shouldn't happen.\n";
+//        return PointSphere(sweep_line, phi);
+//    }
+    Real a = cos(arc.theta) - cos(sweep_line);
+    Real b = sin(sweep_line) - sin(arc.theta) * cos(phi - arc.phi);
+    return PointSphere(atan2(a, b), phi);
 }
 
 void VoronoiSphere::add_initial_arc_sphere(int cell_id)

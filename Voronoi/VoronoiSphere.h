@@ -229,7 +229,7 @@ namespace Voronoi
         
         void handle_circle_event(CircleEventSphere * event);
                 
-        bool parabolic_intersection(PointSphere left, PointSphere right, PointSphere & intersection);
+        bool parabolic_intersection(PointSphere left, PointSphere right, Real & phi_intersection);
         
         PointSphere phi_to_point(PointSphere arc, Real phi);
         

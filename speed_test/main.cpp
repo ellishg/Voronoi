@@ -64,11 +64,11 @@ int main(int argc, const char * argv[]) {
             max_trial_time = trial_time;
         }
     }
-    cout << "\nGenerated " << num_trials << " voronoi diagrams from " << num_sites << " sites.\n\n";
+    cout << "\nGenerated " << num_trials << " voronoi diagrams with " << num_sites << " sites.\n\n";
     
     cout << "Total time = " << total_time << " seconds.\n";
     cout << "Average = " << total_time / num_trials << " seconds.\n";
     cout << "Max = " << max_trial_time << " seconds.\n\n";
-    
+        
     return 0;
 }
