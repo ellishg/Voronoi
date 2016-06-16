@@ -12,16 +12,12 @@
 using namespace std;
 using namespace Voronoi;
 
-const int num_sites = 1000;
-const int num_trials = 50;
+const int num_sites = 10;
+const int num_trials = 1000000;
 
 int main(int argc, const char * argv[]) {
     
-    unsigned int seed = (unsigned int)time(NULL);
-    
-    srand(seed);
-    
-    cout << "Seed = " << seed << endl;
+    srand((unsigned int)time(NULL));
     
     float points[3 * num_sites];
     
@@ -33,8 +29,15 @@ int main(int argc, const char * argv[]) {
     
     float max_trial_time = 0;
     
-    for (int i = 0; i < num_trials; i++)
+    for (int j = 0; j < num_trials; j++)
     {
+        
+        unsigned int seed = rand();
+        
+        srand(seed);
+        
+        cout << j << ") Seed = " << seed << endl;
+        
         const int precision = numeric_limits<int>::max();
         for (int i = 0; i < num_sites; i++)
         {

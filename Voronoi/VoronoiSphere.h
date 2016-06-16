@@ -14,6 +14,8 @@
 #include <queue>
 #include "math.h"
 
+#include "assert.h"
+
 namespace Voronoi
 {
     typedef double Real;

@@ -21,7 +21,21 @@ using namespace Voronoi;
 SDL_Window * window;
 SDL_Event event;
 
-const int num_sites = 16000;
+const int num_sites = 5000;
+/*
+ *  Bad seeds:
+ *  1465687667 (5000 sites)
+ *  1465687822 (5000 sites)
+ *  1465689212 (5000 sites)
+ *  1465690738 (10000 sites)
+ *  1465690788 (10000 sites)
+ *  1702279100 (10 sites)
+ *  1031757984 (10 sites)
+ */
+
+//unsigned int seed = (unsigned int)time(NULL);
+unsigned int seed = 1465687667;
+
 
 #ifdef SPHERICAL_MODE
 float points[num_sites * 3];
@@ -34,7 +48,7 @@ const float line_width = 1.f;
 
 void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram)
 {
-    bool should_rotate = true;
+    bool should_rotate = false;
     bool render_cells = true;
     bool render_voronoi = true;
     bool render_delaunay = true;
@@ -258,18 +272,6 @@ void sleep() {
 }
 
 int main(int argc, const char * argv[]) {
-    
-    /*
-     *  Bad seeds:
-     *  1465687667 (5000 sites)
-     *  1465687822 (5000 sites)
-     *  1465689212 (5000 sites)
-     *  1465690738 (10000 sites)
-     *  1465690788 (10000 sites)
-     */
-    
-    unsigned int seed = (unsigned int)time(NULL);
-    seed = 1465837530;
     
     cout << "Seed = " << seed << endl;
     
