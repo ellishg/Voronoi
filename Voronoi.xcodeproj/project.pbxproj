@@ -321,6 +321,10 @@
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-Ofast",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -331,6 +335,10 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
+				);
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-Ofast",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -346,6 +354,7 @@
 				E7AE3CF11D0F14020083B29C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		E7F6CA491CFF8E7A00B47D59 /* Build configuration list for PBXProject "Voronoi" */ = {
 			isa = XCConfigurationList;

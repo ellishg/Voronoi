@@ -13,7 +13,7 @@ using namespace Voronoi;
 
 VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_points, void (*render)(vector<HalfEdgeSphere>, float, float *, int), void (*sleep)())
 {
-    bool should_render = false && render != NULL && sleep != NULL;
+    //bool should_render = false && render != NULL && sleep != NULL;
     
     initialize_diagram(points, num_points);
 
@@ -34,24 +34,24 @@ VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_poi
             circle_event_queue.pop();
             delete circle;
             
-            if (should_render)
-            {
-                float * p = new float[num_points * 3];
-                ArcSphere * cur = beach_head;
-                int i = 0;
-                do
-                {
-                    PointSphere site = voronoi_diagram.cells[cur->cell_id].site;
-                    p[3 * i] = site.x;
-                    p[3 * i + 1] = site.y;
-                    p[3 * i + 2] = site.z;
-                    i++;
-                    cur = cur->next[0];
-                } while (cur != beach_head);
-                render(voronoi_diagram.edges, sweep_line, p, i);
-                delete [] p;
-                sleep();
-            }
+//            if (should_render)
+//            {
+//                float * p = new float[num_points * 3];
+//                ArcSphere * cur = beach_head;
+//                int i = 0;
+//                do
+//                {
+//                    PointSphere site = voronoi_diagram.cells[cur->cell_id].site;
+//                    p[3 * i] = site.x;
+//                    p[3 * i + 1] = site.y;
+//                    p[3 * i + 2] = site.z;
+//                    i++;
+//                    cur = cur->next[0];
+//                } while (cur != beach_head);
+//                render(voronoi_diagram.edges, sweep_line, p, i);
+//                delete [] p;
+//                sleep();
+//            }
         }
         else
         {
@@ -60,24 +60,24 @@ VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_poi
             handle_site_event(cell);
             site_event_queue.pop();
             
-            if (should_render)
-            {
-                float * p = new float[num_points * 3];
-                ArcSphere * cur = beach_head;
-                int i = 0;
-                do
-                {
-                    PointSphere site = voronoi_diagram.cells[cur->cell_id].site;
-                    p[3 * i] = site.x;
-                    p[3 * i + 1] = site.y;
-                    p[3 * i + 2] = site.z;
-                    i++;
-                    cur = cur->next[0];
-                } while (cur != beach_head);
-                render(voronoi_diagram.edges, sweep_line, p, i);
-                delete [] p;
-                sleep();
-            }
+//            if (should_render)
+//            {
+//                float * p = new float[num_points * 3];
+//                ArcSphere * cur = beach_head;
+//                int i = 0;
+//                do
+//                {
+//                    PointSphere site = voronoi_diagram.cells[cur->cell_id].site;
+//                    p[3 * i] = site.x;
+//                    p[3 * i + 1] = site.y;
+//                    p[3 * i + 2] = site.z;
+//                    i++;
+//                    cur = cur->next[0];
+//                } while (cur != beach_head);
+//                render(voronoi_diagram.edges, sweep_line, p, i);
+//                delete [] p;
+//                sleep();
+//            }
         }
     }
     
@@ -159,8 +159,13 @@ void VoronoiSphere::handle_site_event(VoronoiCellSphere cell)
         
         return;
     }
-        
+    
+    bool move_right = true;
+    
     ArcSphere * arc = traverse_skiplist_to_site(beach_head, cell.site.phi);
+    
+    ArcSphere * left = arc->prev[0];
+    ArcSphere * right = arc->next[0];
     
     do {
         
@@ -175,10 +180,16 @@ void VoronoiSphere::handle_site_event(VoronoiCellSphere cell)
         
         if (!valid_arc && ((prev_site.phi < next_site.phi && prev_site.phi <= cell.site.phi && cell.site.phi <= next_site.phi) || (prev_site.phi > next_site.phi && (prev_site.phi <= cell.site.phi || cell.site.phi <= next_site.phi))))
         {
-            cout << "No intersection.\n";
-            assert(0);
+            /*
+             *  Here we have two sites that are probably on the sweep line. The arcs only intersect at the north pole.
+             *  Also, our query site is in between them. So it only needs to be inserted in the beachline.
+             *  This is extreamly unlikely and has not happened yet. But we account for it anyway.
+             */
+            
+            add_arc_sphere(cell.cell_id, arc, arc->next[0]);
+            return;
         }
-         if (valid_arc && ((phi_start < phi_end && phi_start <= cell.site.phi && cell.site.phi <= phi_end) || (phi_start > phi_end && (phi_start <= cell.site.phi || cell.site.phi <= phi_end))))
+        else if (valid_arc && ((phi_start < phi_end && phi_start <= cell.site.phi && cell.site.phi <= phi_end) || (phi_start > phi_end && (phi_start <= cell.site.phi || cell.site.phi <= phi_end))))
         {
             //arc is found
             
@@ -208,7 +219,19 @@ void VoronoiSphere::handle_site_event(VoronoiCellSphere cell)
             return;
         }
         
-        arc = arc->next[0];
+        if (move_right)
+        {
+            arc = right;
+            right = right->next[0];
+        }
+        else
+        {
+            arc = left;
+            left = left->prev[0];
+        }
+        
+        move_right = !move_right;
+        
         
     } while (true);
 }
@@ -510,7 +533,7 @@ ArcSphere * VoronoiSphere::traverse_skiplist_to_site(ArcSphere * arc, Real phi)
             level--;
         }
     }
-    return arc->prev[0];
+    return arc;
 }
 
 int VoronoiSphere::random_height()

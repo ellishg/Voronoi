@@ -6,14 +6,34 @@
 //  Copyright © 2016 Ellis Sparky Hoag. All rights reserved.
 //
 
+/*
+ *  Records as of 6/16/16
+ *
+ *  100 sites:
+ *  0.000971891 average
+ *  0.001387    max
+ *
+ *  1000 sites:
+ *  0.0142663 average
+ *  0.022298 max
+ *
+ *  10000 sites:
+ *  0.387427 average
+ *  0.509439 max
+ *
+ *  16000 sites:
+ *  0.704845 average
+ *  0.80241 max
+ */
+
 #include <iostream>
 #include "VoronoiSphere.h"
 
 using namespace std;
 using namespace Voronoi;
 
-const int num_sites = 10;
-const int num_trials = 1000000;
+const int num_sites = 1000;
+const int num_trials = 30;
 
 int main(int argc, const char * argv[]) {
     
