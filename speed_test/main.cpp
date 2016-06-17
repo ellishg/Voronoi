@@ -7,23 +7,23 @@
 //
 
 /*
- *  Records as of 6/16/16
+ *  Records as of 6/17/16
  *
  *  100 sites:
- *  0.000971891 average
- *  0.001387    max
+ *  0.0008778 average
+ *  0.001331    max
  *
  *  1000 sites:
- *  0.0142663 average
- *  0.022298 max
+ *  0.0127625 average
+ *  0.02085 max
  *
  *  10000 sites:
- *  0.387427 average
- *  0.509439 max
+ *  0.298549 average
+ *  0.369286 max
  *
  *  16000 sites:
- *  0.704845 average
- *  0.80241 max
+ *  0.617974 average
+ *  0.983193 max
  */
 
 #include <iostream>
@@ -32,7 +32,7 @@
 using namespace std;
 using namespace Voronoi;
 
-const int num_sites = 1000;
+const int num_sites = 16000;
 const int num_trials = 30;
 
 int main(int argc, const char * argv[]) {
@@ -49,14 +49,14 @@ int main(int argc, const char * argv[]) {
     
     float max_trial_time = 0;
     
-    for (int j = 0; j < num_trials; j++)
+    for (int trial = 1; trial <= num_trials; trial++)
     {
         
         unsigned int seed = rand();
         
         srand(seed);
         
-        cout << j << ") Seed = " << seed << endl;
+        cout << trial << ") Seed = " << seed << endl;
         
         const int precision = numeric_limits<int>::max();
         for (int i = 0; i < num_sites; i++)

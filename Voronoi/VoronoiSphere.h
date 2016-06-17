@@ -33,11 +33,11 @@ namespace Voronoi
     {
         PointCartesian(Real a = 0, Real b = 0, Real c = 0) : x(a), y(b), z(c) {}
                 
-        friend PointCartesian operator-(const PointCartesian left, const PointCartesian right) {return PointCartesian(left.x - right.x, left.y - right.y, left.z - right.z);}
+        inline friend PointCartesian operator-(const PointCartesian left, const PointCartesian right) {return PointCartesian(left.x - right.x, left.y - right.y, left.z - right.z);}
         
         friend std::ostream & operator<<(std::ostream & out, const PointCartesian & p) {return out << "(" << p.x << ", " << p.y << ", " << p.z << ")\n";}
         
-        void normalize()
+        inline void normalize()
         {
             Real r = sqrt(x*x + y*y + z*z);
             if (r == 0)
@@ -53,7 +53,7 @@ namespace Voronoi
             }
         }
         
-        static PointCartesian cross_product(const PointCartesian & left, const PointCartesian & right)
+        inline static PointCartesian cross_product(const PointCartesian & left, const PointCartesian & right)
         {
             Real x = left.y * right.z - left.z * right.y;
             Real y = left.z * right.x - left.x * right.z;
@@ -82,19 +82,19 @@ namespace Voronoi
         
         PointSphere(PointCartesian point) : PointSphere(point.x, point.y, point.z) {}
         
-        friend bool operator<(const PointSphere & left, const PointSphere & right) {return left.theta == right.theta ? left.phi < right.phi : left.theta < right.theta;}
-        friend bool operator>(const PointSphere & left, const PointSphere & right) {return left.theta == right.theta ? left.phi > right.phi : left.theta > right.theta;}
+        inline friend bool operator<(const PointSphere & left, const PointSphere & right) {return left.theta == right.theta ? left.phi < right.phi : left.theta < right.theta;}
+        inline friend bool operator>(const PointSphere & left, const PointSphere & right) {return left.theta == right.theta ? left.phi > right.phi : left.theta > right.theta;}
         friend bool operator==(const PointSphere & left, const PointSphere & right) {return left.theta == right.theta && left.phi == right.phi;}
         
         friend std::ostream & operator<<(std::ostream & out, const PointSphere & p) {return out << "(" << p.theta << ", " << p.phi << ")\n";}
         
-        PointCartesian get_cartesian()
+        inline PointCartesian get_cartesian()
         {
             set_cartesian();
             return PointCartesian(x, y, z);
         }
         
-        static Real angle_between(PointSphere & a, PointSphere & b)
+        inline static Real angle_between(PointSphere & a, PointSphere & b)
         {
             a.set_cartesian();
             b.set_cartesian();
@@ -103,7 +103,7 @@ namespace Voronoi
         
     private:
         
-        void set_cartesian()
+        inline void set_cartesian()
         {
             if (!has_cartesian)
             {
@@ -125,10 +125,10 @@ namespace Voronoi
         VoronoiCellSphere(PointCartesian point, int _id) : site(point), cell_id(_id) {}
         
         PointSphere site;
+
+        int cell_id;
         
         std::vector<int> edge_ids;
-        
-        int cell_id;
     };
     
     struct ArcSphere
@@ -150,13 +150,13 @@ namespace Voronoi
     {
         CircleEventSphere(ArcSphere * a, PointSphere c, Real l) : arc(a), circumcenter(c), lowest_theta(l), is_valid(true) {}
         
+        PointSphere circumcenter;
+    
+        bool is_valid;
+        
         ArcSphere * arc;
         
-        PointSphere circumcenter;
-        
         Real lowest_theta;
-        
-        bool is_valid;
     };
     
     struct HalfEdgeSphere
@@ -199,9 +199,6 @@ namespace Voronoi
         
     private:
         
-        const int max_skiplist_height = 15;
-        const int skip_list_height_probability = 2;
-        
         struct PriorityQueueCompare;
         
         /*
@@ -217,6 +214,8 @@ namespace Voronoi
         
         Real sweep_line;
         
+        Real cos_sweep_line, sin_sweep_line;
+        
         VoronoiDiagramSphere voronoi_diagram;
                 
         std::priority_queue<VoronoiCellSphere, std::vector<VoronoiCellSphere>, PriorityQueueCompare> site_event_queue;
@@ -231,11 +230,11 @@ namespace Voronoi
                 
         bool parabolic_intersection(PointSphere left, PointSphere right, Real & phi_intersection);
         
-        PointSphere phi_to_point(PointSphere arc, Real phi);
+        inline PointSphere phi_to_point(PointSphere arc, Real phi);
         
         void check_circle_event(ArcSphere * arc);
         
-        void make_circle(PointSphere a, PointSphere b, PointSphere c, PointSphere & circumcenter, Real & lowest_theta);
+        inline void make_circle(PointSphere a, PointSphere b, PointSphere c, PointSphere & circumcenter, Real & lowest_theta);
         
         void initialize_diagram(float * points, int num_points);
         

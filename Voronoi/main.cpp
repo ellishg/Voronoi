@@ -21,14 +21,20 @@ using namespace Voronoi;
 SDL_Window * window;
 SDL_Event event;
 
-const int num_sites = 16000;
+const int num_sites = 100;
 /*
  *  Bad seeds:
  *  1714267297 (16000 sites)
+ *  1466122514 (16000 sites)
+ *  1466122550 (16000 sites)
+ *  1466123863 (16000 sites)
+ *  1466177950
+ *  1466178629
+ *  1466178962
  */
 
 unsigned int seed = (unsigned int)time(NULL);
-//unsigned int seed = 1714267297;
+//unsigned int seed = 1466123863;
 
 
 #ifdef SPHERICAL_MODE
