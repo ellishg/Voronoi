@@ -15,6 +15,7 @@
 #include "math.h"
 
 #include "assert.h"
+#include <iomanip>
 
 namespace Voronoi
 {
@@ -195,7 +196,7 @@ namespace Voronoi
     {
     public:
         
-        VoronoiDiagramSphere generate_voronoi(float * points, int num_points, void (*render)(std::vector<HalfEdgeSphere>, float, float *, int) = NULL, void (*sleep)() = NULL);
+        VoronoiDiagramSphere generate_voronoi(float * points, int num_points, void (*render)(VoronoiDiagramSphere, float) = NULL, bool (*is_sleeping)() = NULL);
         
     private:
         

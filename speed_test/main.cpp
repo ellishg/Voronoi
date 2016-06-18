@@ -33,7 +33,7 @@ using namespace std;
 using namespace Voronoi;
 
 const int num_sites = 16000;
-const int num_trials = 30;
+const int num_trials = 10;
 
 int main(int argc, const char * argv[]) {
     

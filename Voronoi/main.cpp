@@ -20,17 +20,21 @@ using namespace Voronoi;
 
 SDL_Window * window;
 SDL_Event event;
+SDL_GLContext context;
 
-const int num_sites = 100;
+const int window_size = 600;
+
+const int num_sites = 10000;
 /*
  *  Bad seeds:
  *  1714267297 (16000 sites)
  *  1466122514 (16000 sites)
  *  1466122550 (16000 sites)
  *  1466123863 (16000 sites)
- *  1466177950
- *  1466178629
- *  1466178962
+ *  1466177950 (16000 sites)
+ *  1466178629 (16000 sites)
+ *  1466178962 (16000 sites)
+ *  1466291162 (10000 sites)
  */
 
 unsigned int seed = (unsigned int)time(NULL);
@@ -46,12 +50,13 @@ float points[num_sites * 2];
 const float point_size = 2.f;
 const float line_width = 1.f;
 
-void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram)
+void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, float sweep_line = 0)
 {
     bool should_rotate = true;
     bool render_cells = true;
     bool render_voronoi = true;
     bool render_delaunay = true;
+    bool render_sweep_line = false && sweep_line != 0;
  
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
@@ -75,8 +80,11 @@ void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram)
         glBegin(GL_LINES);
             for (auto edge : voronoi_diagram.edges)
             {
-                glVertex3f(edge.start.x, edge.start.y, edge.start.z);
-                glVertex3f(edge.end.x, edge.end.y, edge.end.z);
+                if (edge.is_finished)
+                {
+                    glVertex3f(edge.start.x, edge.start.y, edge.start.z);
+                    glVertex3f(edge.end.x, edge.end.y, edge.end.z);
+                }
             }
         glEnd();
     }
@@ -106,7 +114,30 @@ void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram)
         glEnd();
     }
     
+    if (render_sweep_line)
+    {
+        glColor3f(0, 1, 1);
+        glBegin(GL_LINE_LOOP);
+            const int num_steps = 10;
+            for (int i = 0; i < num_steps; i++)
+            {
+                glVertex3f(sin(sweep_line) * cos(2.f * M_PI * i / num_steps), sin(sweep_line) * sin(2.f * M_PI * i / num_steps), cos(sweep_line));
+            }
+        glEnd();
+    }
+    
     SDL_GL_SwapWindow(window);
+}
+
+void quit()
+{
+    SDL_DestroyWindow(window);
+    
+    SDL_GL_DeleteContext(context);
+    
+    SDL_Quit();
+    
+    exit(0);
 }
 
 void render_points(float * points, int num_points, float r, float g, float b) {
@@ -126,42 +157,6 @@ void render_points(float * points, int num_points, float r, float g, float b) {
     glEnd();
 }
 
-void render_edges_sphere(vector<HalfEdgeSphere> edges) {
-    
-    glLineWidth(line_width);
-    glPointSize(point_size);
-    
-    //const int num_segments = 100;
-    
-    for (int i = 0; i < edges.size(); i++) {
-        
-        if (!edges[i].is_finished) {continue;}
-        
-        glColor3f(1.f, 1.f, 0.f);
-        
-        //float theta0 = edges[i]->start->theta;
-        //float theta1 = edges[i]->end->theta;
-        //float phi0 = edges[i]->start->phi;
-        //float phi1 = edges[i]->end->phi;
-        
-        //PointCartesian start = edges[i]->start;
-        //PointCartesian end = edges[i]->end.get_cartesian();
-        
-        
-        glBegin(GL_LINE_STRIP);
-            glVertex3f(edges[i].start.x, edges[i].start.y, edges[i].start.z);
-            glVertex3f(edges[i].end.x, edges[i].end.y, edges[i].end.z);
-    
-            //for (int i = 0; i < num_segments; i++) {
-            //    glColor3f(1.f, (float)i / num_segments, 0.f);
-            //    float theta = theta0 + (theta1 - theta0) * i / num_segments;
-            //    float phi = phi0 + (phi1 - phi0) * i / num_segments;
-            //    glVertex3f(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
-            //}
-        glEnd();
-    }
-}
-
 void render_edges_2d(vector<HalfEdge2D *> edges) {
     
     glLineWidth(line_width);
@@ -177,48 +172,8 @@ void render_edges_2d(vector<HalfEdge2D *> edges) {
         glEnd();
         
         glColor3f(0.f, 1.f, 0.f);
-        
-        //glBegin(GL_POINTS);
-        //    glVertex3f(edges[i]->start.x, edges[i]->start.y, 0.f);
-        //    glVertex3f(edges[i]->end.x, edges[i]->end.y, 0.f);
-        //glEnd();
     }
 }
-
-void render_sphere(vector<HalfEdgeSphere> edges, float sweep_line = 0, float * beach = NULL, int beach_size = 0) {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-    if (sweep_line != 0)
-    {
-        glColor3f(0, 1, 1.f);
-        glBegin(GL_LINE_LOOP);
-        const int num_steps = 100;
-        for (int i = 0; i < num_steps; i++) {
-            glVertex3f(sin(sweep_line) * cos(2.f * M_PI * i / num_steps), sin(sweep_line) * sin(2.f * M_PI * i / num_steps), cos(sweep_line));
-        }
-        glEnd();
-    }
-    else
-    {
-//        glLoadIdentity();
-//        
-//        glRotatef(-90, 1, 0, 0);
-//        
-//        float angle = SDL_GetTicks() / 50.f;
-//        
-//        glRotatef(angle, 0, 0, 1);
-    }
-    
-    render_edges_sphere(edges);
-    render_points(points, num_sites, 1, 0, 0);
-    
-    if (beach != NULL) {
-        render_points(beach, beach_size, 1, 1, 0);
-    }
-    
-    SDL_GL_SwapWindow(window);
-}
-
 
 void render_2d(vector<HalfEdge2D *> edges, float sweep_line = 0) {
     glClear(GL_COLOR_BUFFER_BIT);
@@ -233,42 +188,44 @@ void render_2d(vector<HalfEdge2D *> edges, float sweep_line = 0) {
     glEnd();
     
     SDL_GL_SwapWindow(window);
-
 }
 
-void sleep() {
-    //SDL_Delay(25);
-    bool delay = true;
+bool is_sleeping() {
     
-    while (delay) {
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-                case SDL_KEYDOWN:
-                    switch (event.key.keysym.sym) {
-                        case SDLK_SPACE:
-                            delay = false;
-                            break;
-                        case SDLK_UP:
-                            glRotatef(10, 1, 0, 0);
-                            break;
-                        case SDLK_DOWN:
-                            glRotatef(10, -1, 0, 0);
-                            break;
-                        case SDLK_LEFT:
-                            glRotatef(10, 0, 0, 1);
-                            break;
-                        case SDLK_RIGHT:
-                            glRotatef(10, 0, 0, -1);
-                            break;
-                        default:
-                            break;
-                    }
-                    break;
-                default:
-                    break;
-            }
+    while (SDL_PollEvent(&event)) {
+        switch (event.type) {
+            case SDL_QUIT:
+                quit();
+                break;
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.sym) {
+                    case SDLK_ESCAPE:
+                        quit();
+                        break;
+                    case SDLK_SPACE:
+                        return false;
+                        break;
+                    case SDLK_UP:
+                        glRotatef(10, 1, 0, 0);
+                        break;
+                    case SDLK_DOWN:
+                        glRotatef(10, -1, 0, 0);
+                        break;
+                    case SDLK_LEFT:
+                        glRotatef(10, 0, 0, 1);
+                        break;
+                    case SDLK_RIGHT:
+                        glRotatef(10, 0, 0, -1);
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            default:
+                break;
         }
     }
+    return true;
 }
 
 int main(int argc, const char * argv[]) {
@@ -282,7 +239,6 @@ int main(int argc, const char * argv[]) {
         return 0;
     }
     
-    const int window_size = 600;
     window = SDL_CreateWindow("Voronoi", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_size, window_size, SDL_WINDOW_OPENGL);
     
     if(window == NULL)   {
@@ -290,7 +246,7 @@ int main(int argc, const char * argv[]) {
         return 0;
     }
 
-    SDL_GLContext context = SDL_GL_CreateContext(window);
+    context = SDL_GL_CreateContext(window);
     
     if (context == NULL) {
         cout << "Error creating context.\n";
@@ -310,8 +266,6 @@ int main(int argc, const char * argv[]) {
 #endif
     
     glMatrixMode(GL_MODELVIEW);
-    
-    bool is_running = true;
     
     const int precision = numeric_limits<int>::max();
     //const int precision = 10;
@@ -338,7 +292,7 @@ int main(int argc, const char * argv[]) {
     clock_t t = clock();
     
     VoronoiSphere voronoi;
-    VoronoiDiagramSphere voronoi_diagram = voronoi.generate_voronoi(points, num_sites, render_sphere, sleep);
+    VoronoiDiagramSphere voronoi_diagram = voronoi.generate_voronoi(points, num_sites, render_voronoi_sphere, is_sleeping);
 
     cout << "Generated voronoi from " << num_sites << " sites in " << (clock() - t) / (float)CLOCKS_PER_SEC << " seconds.\n";
     
@@ -348,10 +302,9 @@ int main(int argc, const char * argv[]) {
     vector<HalfEdge2D *> edges = voronoi.get_voronoi_edges();
 #endif
     
-    while(is_running) {
+    while(true) {
         
 #ifdef SPHERICAL_MODE
-        //render_sphere(voronoi_diagram.edges);
         render_voronoi_sphere(voronoi_diagram);
 #else
         render_2d(edges);
@@ -360,12 +313,12 @@ int main(int argc, const char * argv[]) {
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
                 case SDL_QUIT:
-                    is_running = false;
+                    quit();
                     break;
                 case SDL_KEYDOWN:
                     switch (event.key.keysym.sym) {
                         case SDLK_ESCAPE:
-                            is_running = false;
+                            quit();
                             break;
                         case SDLK_UP:
                             glRotatef(10, 1, 0, 0);
@@ -389,12 +342,6 @@ int main(int argc, const char * argv[]) {
         }
 
     }
-        
-    SDL_DestroyWindow(window);
-    
-    SDL_GL_DeleteContext(context);
-    
-    SDL_Quit();
     
     return 0;
 }

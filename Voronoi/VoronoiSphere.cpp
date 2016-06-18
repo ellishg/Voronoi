@@ -11,9 +11,9 @@
 using namespace std;
 using namespace Voronoi;
 
-VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_points, void (*render)(vector<HalfEdgeSphere>, float, float *, int), void (*sleep)())
+VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_points, void (*render)(VoronoiDiagramSphere, float), bool (*is_sleeping)())
 {
-    //bool should_render = true && render != NULL && sleep != NULL;
+    //bool should_render = false && render != NULL && is_sleeping != NULL;
     
     initialize_diagram(points, num_points);
 
@@ -36,23 +36,9 @@ VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_poi
             circle_event_queue.pop();
             delete circle;
             
-//            if (should_render)
+//            while (should_render && is_sleeping())
 //            {
-//                float * p = new float[num_points * 3];
-//                ArcSphere * cur = beach_head;
-//                int i = 0;
-//                do
-//                {
-//                    PointSphere site = voronoi_diagram.cells[cur->cell_id].site;
-//                    p[3 * i] = site.x;
-//                    p[3 * i + 1] = site.y;
-//                    p[3 * i + 2] = site.z;
-//                    i++;
-//                    cur = cur->next[0];
-//                } while (cur != beach_head);
-//                render(voronoi_diagram.edges, sweep_line, p, i);
-//                delete [] p;
-//                //sleep();
+//                render(voronoi_diagram, sweep_line);
 //            }
         }
         else
@@ -64,23 +50,9 @@ VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_poi
             handle_site_event(cell);
             site_event_queue.pop();
             
-//            if (should_render)
+//            while (should_render && is_sleeping())
 //            {
-//                float * p = new float[num_points * 3];
-//                ArcSphere * cur = beach_head;
-//                int i = 0;
-//                do
-//                {
-//                    PointSphere site = voronoi_diagram.cells[cur->cell_id].site;
-//                    p[3 * i] = site.x;
-//                    p[3 * i + 1] = site.y;
-//                    p[3 * i + 2] = site.z;
-//                    i++;
-//                    cur = cur->next[0];
-//                } while (cur != beach_head);
-//                render(voronoi_diagram.edges, sweep_line, p, i);
-//                delete [] p;
-//                //sleep();
+//                render(voronoi_diagram, sweep_line);
 //            }
         }
     }
@@ -198,6 +170,8 @@ void VoronoiSphere::handle_site_event(VoronoiCellSphere cell)
         else if (valid_arc && ((phi_start < phi_end && phi_start <= cell.site.phi && cell.site.phi <= phi_end) || (phi_start > phi_end && (phi_start <= cell.site.phi || cell.site.phi <= phi_end))))
         {
             // The arc is found!
+            //cout << phi_start << ", " << phi_end << endl;
+            //cout << voronoi_diagram.cells[arc->cell_id].site << cell.site << voronoi_diagram.cells[arc->next[0]->cell_id].site << sweep_line << "\n\n";
             
             if (arc->event != NULL)
             {
@@ -332,7 +306,7 @@ bool VoronoiSphere::parabolic_intersection(PointSphere left, PointSphere right, 
          *  Both sites are on the sweep line so our intersection is at the north pole.
          *  We need to handle this special case.
          */
-        cout << "Intersection is at north pole.\n";
+        //cout << "Intersection is at north pole.\n";
         return false;
     }
     else if (left.theta == sweep_line && right.theta < sweep_line)
@@ -354,7 +328,7 @@ bool VoronoiSphere::parabolic_intersection(PointSphere left, PointSphere right, 
         if (beach_head == beach_head->next[0]->next[0])
         {
             phi_intersection = right.phi + ((right.phi > 0) ? M_PI : -M_PI);
-            cout << "Right site is on sweep line and there are exactly two arcs in beach.\n";
+            //cout << "Right site is on sweep line and there are exactly two arcs in beach.\n";
         }
         else
         {
@@ -375,7 +349,7 @@ bool VoronoiSphere::parabolic_intersection(PointSphere left, PointSphere right, 
     
     Real a = cos_minus_cos_right * u.x - cos_minus_cos_left * v.x;
     Real b = cos_minus_cos_right * u.y - cos_minus_cos_left * v.y;
-  
+    
     Real e = (cos_left_theta - cos_right_theta) * sin_sweep_line;
     
     Real sqrt_a_b = sqrt(a*a + b*b);
@@ -383,12 +357,15 @@ bool VoronoiSphere::parabolic_intersection(PointSphere left, PointSphere right, 
     if (fabs(e) > sqrt_a_b)
     {
         /*
+         *  Theoretically this is impossible becasue as the sweep line
+         *  approaches either the left or right theta e / sqrt_a_b approaches
+         *  1. In reality, e can be greater than sqrt_a_b due to rounding.
          *  This excecutes when a site is close enought to the sweep line
          *  to cause problems. So one of the parabolas is actually a line.
          *  The lower site contains the phi of our intersection.
          */
         phi_intersection = (left.theta > right.theta) ? left.phi : right.phi;
-        //cout << "Arc close to sweep line. " << fabs(e) << " > " << sqrt_a_b << endl << left << right << sweep_line << endl;
+        //cout << "Arc is close to sweep line. " << setprecision(50) << fabs(e) << " > " << sqrt_a_b << endl << left << right << sweep_line << endl;
         return true;
     }
     
@@ -411,11 +388,6 @@ bool VoronoiSphere::parabolic_intersection(PointSphere left, PointSphere right, 
 
 PointSphere VoronoiSphere::phi_to_point(PointSphere arc, Real phi)
 {
-    if (arc.theta >= sweep_line)
-    {
-        cout << "This shouldn't happen.\n";
-        return PointSphere(sweep_line, phi);
-    }
     Real a = cos(arc.theta) - cos_sweep_line;
     Real b = sin_sweep_line - sin(arc.theta) * cos(phi - arc.phi);
     return PointSphere(atan2(a, b), phi);
