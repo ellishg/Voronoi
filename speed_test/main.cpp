@@ -17,6 +17,10 @@
  *  0.0127625 average
  *  0.02085 max
  *
+ *  4000 sites:
+ *  0.082358 average
+ *  0.10838 max
+ *
  *  10000 sites:
  *  0.298549 average
  *  0.369286 max
@@ -32,14 +36,12 @@
 using namespace std;
 using namespace Voronoi;
 
-const int num_sites = 16000;
-const int num_trials = 10;
+const int num_sites = 1000;
+const int num_trials = 100;
 
 int main(int argc, const char * argv[]) {
     
     srand((unsigned int)time(NULL));
-    
-    float points[3 * num_sites];
     
     clock_t t;
     
@@ -58,6 +60,8 @@ int main(int argc, const char * argv[]) {
         
         cout << trial << ") Seed = " << seed << endl;
         
+        vector<tuple<float, float, float>> verts;
+        
         const int precision = numeric_limits<int>::max();
         for (int i = 0; i < num_sites; i++)
         {
@@ -66,14 +70,19 @@ int main(int argc, const char * argv[]) {
             float z = (rand() % precision) / (float)precision - 0.5f;
             
             float r = sqrt(x*x + y*y + z*z);
-            points[3 * i] = x / r;
-            points[3 * i + 1] = y / r;
-            points[3 * i + 2] = z / r;
+            
+            tuple<float, float, float> point = make_tuple(x / r, y / r, z / r);
+            
+            verts.push_back(point);
         }
 
         t = clock();
         
-        VoronoiDiagramSphere voronoi_diagram = voronoi.generate_voronoi(points, num_sites);
+        voronoi.reset();
+        
+        voronoi.set_sites(&verts);
+        
+        voronoi.generate_voronoi();
         
         float trial_time = (clock() - t) / (float)CLOCKS_PER_SEC;
         

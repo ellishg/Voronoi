@@ -24,7 +24,7 @@ SDL_GLContext context;
 
 const int window_size = 600;
 
-const int num_sites = 10000;
+const int num_sites = 4000;
 /*
  *  Bad seeds:
  *  1714267297 (16000 sites)
@@ -35,15 +35,14 @@ const int num_sites = 10000;
  *  1466178629 (16000 sites)
  *  1466178962 (16000 sites)
  *  1466291162 (10000 sites)
+ *  1705693518 (4000 sites)
  */
 
 unsigned int seed = (unsigned int)time(NULL);
-//unsigned int seed = 1466123863;
+//unsigned int seed = 1705693518;
 
 
-#ifdef SPHERICAL_MODE
-float points[num_sites * 3];
-#else
+#ifndef SPHERICAL_MODE
 float points[num_sites * 2];
 #endif
 
@@ -53,7 +52,7 @@ const float line_width = 1.f;
 void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, float sweep_line = 0)
 {
     bool should_rotate = true;
-    bool render_cells = true;
+    bool render_sites = true;
     bool render_voronoi = true;
     bool render_delaunay = true;
     bool render_sweep_line = false && sweep_line != 0;
@@ -78,12 +77,15 @@ void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, float sweep_lin
     {
         glColor3f(1, 1, 0);
         glBegin(GL_LINES);
-            for (auto edge : voronoi_diagram.edges)
+            for (auto edge : voronoi_diagram.voronoi_edges)
             {
-                if (edge.is_finished)
+                //if (edge.is_finished)
                 {
-                    glVertex3f(edge.start.x, edge.start.y, edge.start.z);
-                    glVertex3f(edge.end.x, edge.end.y, edge.end.z);
+                    PointCartesian start = voronoi_diagram.voronoi_verticies[edge.vidx[0]];
+                    PointCartesian end = voronoi_diagram.voronoi_verticies[edge.vidx[1]];
+                    
+                    glVertex3f(start.x, start.y, start.z);
+                    glVertex3f(end.x, end.y, end.z);
                 }
             }
         glEnd();
@@ -93,23 +95,23 @@ void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, float sweep_lin
     {
         glColor3f(0, 0, 1);
         glBegin(GL_LINES);
-        for (auto edge : voronoi_diagram.edges)
+        for (auto edge : voronoi_diagram.delaunay_edges)
         {
-            PointCartesian start = voronoi_diagram.cells[edge.cell_ids[0]].site.get_cartesian();
-            PointCartesian end = voronoi_diagram.cells[edge.cell_ids[1]].site.get_cartesian();
+            PointCartesian start = voronoi_diagram.sites[edge.vidx[0]];
+            PointCartesian end = voronoi_diagram.sites[edge.vidx[1]];
             glVertex3f(start.x, start.y, start.z);
             glVertex3f(end.x, end.y, end.z);
         }
         glEnd();
     }
     
-    if (render_cells)
+    if (render_sites)
     {
         glColor3f(1, 0, 0);
         glBegin(GL_POINTS);
-        for (auto cell : voronoi_diagram.cells)
+        for (auto site : voronoi_diagram.sites)
         {
-            glVertex3f(cell.site.x, cell.site.y, cell.site.z);
+            glVertex3f(site.x, site.y, site.z);
         }
         glEnd();
     }
@@ -118,7 +120,7 @@ void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, float sweep_lin
     {
         glColor3f(0, 1, 1);
         glBegin(GL_LINE_LOOP);
-            const int num_steps = 10;
+            const int num_steps = 20;
             for (int i = 0; i < num_steps; i++)
             {
                 glVertex3f(sin(sweep_line) * cos(2.f * M_PI * i / num_steps), sin(sweep_line) * sin(2.f * M_PI * i / num_steps), cos(sweep_line));
@@ -175,6 +177,7 @@ void render_edges_2d(vector<HalfEdge2D *> edges) {
     }
 }
 
+#ifndef SPHERICAL_MODE
 void render_2d(vector<HalfEdge2D *> edges, float sweep_line = 0) {
     glClear(GL_COLOR_BUFFER_BIT);
     glLoadIdentity();
@@ -189,6 +192,7 @@ void render_2d(vector<HalfEdge2D *> edges, float sweep_line = 0) {
     
     SDL_GL_SwapWindow(window);
 }
+#endif
 
 bool is_sleeping() {
     
@@ -267,6 +271,8 @@ int main(int argc, const char * argv[]) {
     
     glMatrixMode(GL_MODELVIEW);
     
+    vector<tuple<float, float, float>> verts;
+    
     const int precision = numeric_limits<int>::max();
     //const int precision = 10;
     for (int i = 0; i < num_sites; i++) {
@@ -274,12 +280,12 @@ int main(int argc, const char * argv[]) {
         float x = (rand() % precision) / (float)precision - 0.5f;
         float y = (rand() % precision) / (float)precision - 0.5f;
         float z = (rand() % precision) / (float)precision - 0.5f;
-        //cout << "(" << x<< ", " << y << ", " << z << ")\n";
 
         float r = sqrt(x*x + y*y + z*z);
-        points[3 * i] = x / r;
-        points[3 * i + 1] = y / r;
-        points[3 * i + 2] = z / r;
+        
+        tuple<float, float, float> point = make_tuple(x / r, y / r, z / r);
+        
+        verts.push_back(point);
 #else
         points[2 * i] = (rand() % precision) / (float)precision;
         points[2 * i + 1] = (rand() % precision) / (float)precision;
@@ -292,8 +298,12 @@ int main(int argc, const char * argv[]) {
     clock_t t = clock();
     
     VoronoiSphere voronoi;
-    VoronoiDiagramSphere voronoi_diagram = voronoi.generate_voronoi(points, num_sites, render_voronoi_sphere, is_sleeping);
 
+    voronoi.reset();
+    voronoi.set_sites(&verts);
+    voronoi.generate_voronoi(render_voronoi_sphere, is_sleeping);
+    VoronoiDiagramSphere voronoi_diagram = voronoi.get_voronoi_diagram();
+    
     cout << "Generated voronoi from " << num_sites << " sites in " << (clock() - t) / (float)CLOCKS_PER_SEC << " seconds.\n";
     
 #else

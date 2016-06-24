@@ -11,12 +11,43 @@
 using namespace std;
 using namespace Voronoi;
 
-VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_points, void (*render)(VoronoiDiagramSphere, float), bool (*is_sleeping)())
+void VoronoiSphere::set_sites(std::vector<tuple<float, float, float>> * verts)
 {
-    //bool should_render = false && render != NULL && is_sleeping != NULL;
-    
-    initialize_diagram(points, num_points);
+    for (auto point : *verts)
+    {
+        PointCartesian point_cartesian = PointCartesian(get<0>(point), get<1>(point), get<2>(point));
+        
+        VoronoiCellSphere cell = VoronoiCellSphere(point_cartesian, (int)cells.size());
 
+        site_event_queue.push(cell);
+        
+        cells.push_back(cell);
+        
+        voronoi_diagram.sites.push_back(point_cartesian);
+    }
+}
+
+void VoronoiSphere::reset()
+{
+    beach_head = NULL;
+    sweep_line = 0.f;
+    half_edges.clear();
+    cells.clear();
+    voronoi_diagram.clear();
+    while (!circle_event_queue.empty())
+    {
+        circle_event_queue.pop();
+    }
+    while (!site_event_queue.empty())
+    {
+        site_event_queue.pop();
+    }
+}
+
+void VoronoiSphere::generate_voronoi(void (*render)(VoronoiDiagramSphere, float), bool (*is_sleeping)())
+{
+    bool should_render = false && render != NULL && is_sleeping != NULL;
+    
     while (!site_event_queue.empty() || !circle_event_queue.empty())
     {
         //cout << "[" << site_event_queue.size() << ", " << circle_event_queue.size() << "]\n";
@@ -36,10 +67,10 @@ VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_poi
             circle_event_queue.pop();
             delete circle;
             
-//            while (should_render && is_sleeping())
-//            {
-//                render(voronoi_diagram, sweep_line);
-//            }
+            while (should_render && is_sleeping())
+            {
+                render(voronoi_diagram, sweep_line);
+            }
         }
         else
         {
@@ -50,59 +81,25 @@ VoronoiDiagramSphere VoronoiSphere::generate_voronoi(float * points, int num_poi
             handle_site_event(cell);
             site_event_queue.pop();
             
-//            while (should_render && is_sleeping())
-//            {
-//                render(voronoi_diagram, sweep_line);
-//            }
+            while (should_render && is_sleeping())
+            {
+                render(voronoi_diagram, sweep_line);
+            }
         }
     }
     
-    finalize_diagram();
-    
-    return voronoi_diagram;
-}
-
-void VoronoiSphere::initialize_diagram(float * points, int num_points)
-{    
-    beach_head = NULL;
-    sweep_line = 0;
-    voronoi_diagram.edges.clear();
-    voronoi_diagram.cells.clear();
-    while (!circle_event_queue.empty())
-    {
-        circle_event_queue.pop();
-    }
-    while (!site_event_queue.empty())
-    {
-        site_event_queue.pop();
-    }
-    
-    for (int i = 0; i < num_points; i++)
-    {
-        PointCartesian point_cartesian = PointCartesian(points[3 * i], points[3 * i + 1], points[3 * i + 2]);
-        
-        VoronoiCellSphere cell = VoronoiCellSphere(point_cartesian, (int)voronoi_diagram.cells.size());
-        
-        site_event_queue.push(cell);
-        
-        voronoi_diagram.cells.push_back(cell);
-    }
-}
-
-void VoronoiSphere::finalize_diagram()
-{
     // The final two edges need to be connected.
     
-    for (int i = 0; i < voronoi_diagram.edges.size(); i++)
+    for (int i = 0; i < half_edges.size(); i++)
     {
-        if (!voronoi_diagram.edges[i].is_finished)
+        if (!half_edges[i].is_finished)
         {
-            for (int k = i + 1; k < voronoi_diagram.edges.size(); k++)
+            for (int k = i + 1; k < half_edges.size(); k++)
             {
-                if (!voronoi_diagram.edges[k].is_finished)
+                if (!half_edges[k].is_finished)
                 {
-                    voronoi_diagram.edges[i].finish(voronoi_diagram.edges[k].start);
-                    voronoi_diagram.edges[k].finish(voronoi_diagram.edges[i].start);
+                    finish_half_edge_sphere(i, voronoi_diagram.voronoi_verticies[half_edges[k].start_idx]);
+                    finish_half_edge_sphere(k, voronoi_diagram.voronoi_verticies[half_edges[i].start_idx]);
                     return;
                 }
             }
@@ -112,21 +109,21 @@ void VoronoiSphere::finalize_diagram()
 
 void VoronoiSphere::handle_site_event(VoronoiCellSphere cell)
 {
-    //cout << "Handle site event.\n";
+    //cout << "Handle site event.\n" << cell.site;
     
     if (beach_head == NULL)
     {
-        add_initial_arc_sphere(cell.cell_id);
+        add_initial_arc_sphere(cell.cell_idx);
         return;
     }
     if (beach_head == beach_head->next[0])
     {
-        add_arc_sphere(cell.cell_id, beach_head, beach_head);
+        add_arc_sphere(cell.cell_idx, beach_head, beach_head);
         
-        beach_head->next[0]->left_edge_id = beach_head->right_edge_id;
-        beach_head->next[0]->right_edge_id = beach_head->left_edge_id;
+        beach_head->next[0]->left_edge_idx = beach_head->right_edge_idx;
+        beach_head->next[0]->right_edge_idx = beach_head->left_edge_idx;
         
-        PointSphere cur_site = voronoi_diagram.cells[beach_head->cell_id].site;
+        PointSphere cur_site = cells[beach_head->cell_idx].site;
 
         // This is not really a vertex. It is in the middle of some edge.
         PointCartesian vertex = phi_to_point(cur_site, cell.site.phi).get_cartesian();
@@ -146,9 +143,9 @@ void VoronoiSphere::handle_site_event(VoronoiCellSphere cell)
     
     while (true)
     {
-        PointSphere cur_site = voronoi_diagram.cells[arc->cell_id].site;
-        PointSphere prev_site = voronoi_diagram.cells[arc->prev[0]->cell_id].site;
-        PointSphere next_site = voronoi_diagram.cells[arc->next[0]->cell_id].site;
+        PointSphere cur_site = cells[arc->cell_idx].site;
+        PointSphere prev_site = cells[arc->prev[0]->cell_idx].site;
+        PointSphere next_site = cells[arc->next[0]->cell_idx].site;
 
         Real phi_start, phi_end;
         
@@ -162,7 +159,7 @@ void VoronoiSphere::handle_site_event(VoronoiCellSphere cell)
              *  This is extreamly unlikely and has not happened yet. But we account for it anyway.
              */
             
-            add_arc_sphere(cell.cell_id, arc, arc->next[0]);
+            add_arc_sphere(cell.cell_idx, arc, arc->next[0]);
             cout << "Two arcs interesect at the north pole.\n";
             //assert(0);
             return;
@@ -179,11 +176,11 @@ void VoronoiSphere::handle_site_event(VoronoiCellSphere cell)
             }
             
             //duplicate arc
-            add_arc_sphere(arc->cell_id, arc, arc->next[0]);
-            arc->next[0]->right_edge_id = arc->right_edge_id;
+            add_arc_sphere(arc->cell_idx, arc, arc->next[0]);
+            arc->next[0]->right_edge_idx = arc->right_edge_idx;
 
             //insert new site
-            add_arc_sphere(cell.cell_id, arc, arc->next[0]);
+            add_arc_sphere(cell.cell_idx, arc, arc->next[0]);
             
             // This is not really a vertex. It is in the middle of some edge.
             PointCartesian vertex = phi_to_point(cur_site, cell.site.phi).get_cartesian();
@@ -223,21 +220,19 @@ void VoronoiSphere::handle_circle_event(CircleEventSphere * event)
     //add new vertex
     PointCartesian vertex = event->circumcenter.get_cartesian();
     
-    //voronoi_diagram.verticies.push_back(vertex);
-    
     //add new edge
     add_half_edge_sphere(vertex, left, right);
     
     //finish old edges
-    int left_id = event->arc->left_edge_id;
-    int right_id = event->arc->right_edge_id;
+    int left_id = event->arc->left_edge_idx;
+    int right_id = event->arc->right_edge_idx;
     if (left_id != -1)
     {
-        voronoi_diagram.edges[left_id].finish(vertex);
+        finish_half_edge_sphere(left_id, vertex);
     }
     if (right_id != -1)
     {
-        voronoi_diagram.edges[right_id].finish(vertex);
+        finish_half_edge_sphere(right_id, vertex);
     }
     
     //invalidate old circle events
@@ -268,9 +263,9 @@ void VoronoiSphere::check_circle_event(ArcSphere * arc)
     PointSphere circumcenter;
     Real lowest_theta;
     
-    PointSphere cur_site = voronoi_diagram.cells[arc->cell_id].site;
-    PointSphere prev_site = voronoi_diagram.cells[arc->prev[0]->cell_id].site;
-    PointSphere next_site = voronoi_diagram.cells[arc->next[0]->cell_id].site;
+    PointSphere cur_site = cells[arc->cell_idx].site;
+    PointSphere prev_site = cells[arc->prev[0]->cell_idx].site;
+    PointSphere next_site = cells[arc->next[0]->cell_idx].site;
     
     make_circle(prev_site, cur_site, next_site, circumcenter, lowest_theta);
     
@@ -463,15 +458,33 @@ void VoronoiSphere::remove_arc_sphere(ArcSphere * arc)
 
 void VoronoiSphere::add_half_edge_sphere(PointCartesian start, ArcSphere * left, ArcSphere *right)
 {
-    int edge_id = (int)voronoi_diagram.edges.size();
+    int edge_id = (int)half_edges.size();
+    int voronoi_vertex_id = (int)voronoi_diagram.voronoi_verticies.size();
     
-    HalfEdgeSphere edge(start, left->cell_id, right->cell_id);
-    voronoi_diagram.edges.push_back(edge);
+    voronoi_diagram.delaunay_edges.push_back(Edge(left->cell_idx, right->cell_idx));
     
-    voronoi_diagram.cells[left->cell_id].edge_ids.push_back(edge_id);
-    voronoi_diagram.cells[right->cell_id].edge_ids.push_back(edge_id);
+    voronoi_diagram.voronoi_verticies.push_back(start);
     
-    left->right_edge_id = right->left_edge_id = edge_id;
+    HalfEdgeSphere half_edge(voronoi_vertex_id);
+    half_edges.push_back(half_edge);
+    
+    cells[left->cell_idx].edge_ids.push_back(edge_id);
+    cells[right->cell_idx].edge_ids.push_back(edge_id);
+    
+    left->right_edge_idx = right->left_edge_idx = edge_id;
+}
+
+void VoronoiSphere::finish_half_edge_sphere(int edge_idx, PointCartesian end)
+{
+    if (!half_edges[edge_idx].is_finished)
+    {
+        half_edges[edge_idx].end_idx = (int)voronoi_diagram.voronoi_verticies.size();
+        half_edges[edge_idx].is_finished = true;
+        
+        voronoi_diagram.voronoi_verticies.push_back(end);
+        
+        voronoi_diagram.voronoi_edges.push_back(Edge(half_edges[edge_idx].start_idx, half_edges[edge_idx].end_idx));
+    }
 }
 
 ArcSphere * VoronoiSphere::traverse_skiplist_to_site(ArcSphere * arc, Real phi)
@@ -482,13 +495,13 @@ ArcSphere * VoronoiSphere::traverse_skiplist_to_site(ArcSphere * arc, Real phi)
     
     while (level >= 0)
     {
-        Real delta = fabs(phi - voronoi_diagram.cells[arc->cell_id].site.phi);
+        Real delta = fabs(phi - cells[arc->cell_idx].site.phi);
         if (delta > M_PI) {delta = 2.f * M_PI - delta;}
         
-        Real next_delta = fabs(phi - voronoi_diagram.cells[arc->next[level]->cell_id].site.phi);
+        Real next_delta = fabs(phi - cells[arc->next[level]->cell_idx].site.phi);
         if (next_delta > M_PI) {delta = 2.f * M_PI - next_delta;}
 
-        Real prev_delta = fabs(phi - voronoi_diagram.cells[arc->prev[level]->cell_id].site.phi);
+        Real prev_delta = fabs(phi - cells[arc->prev[level]->cell_idx].site.phi);
         if (prev_delta > M_PI) {delta = 2.f * M_PI - prev_delta;}
 
         if (next_delta < delta && prev_delta > delta)

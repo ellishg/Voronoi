@@ -14,21 +14,42 @@
 #include <queue>
 #include "math.h"
 
-#include "assert.h"
-#include <iomanip>
-
 namespace Voronoi
 {
     typedef double Real;
     
     class VoronoiSphere;
-    struct PointSphere;
-    struct PointCartesian;
-    struct HalfEdgeSphere;
-    struct VoronoiCellSphere;
+    struct Edge;
     struct VoronoiDiagramSphere;
-    struct ArcSphere;
+    struct PointCartesian;
     struct CircleEventSphere;
+    struct ArcSphere;
+    struct PointSphere;
+    
+    struct Edge
+    {
+        Edge(int start_idx = 0, int end_idx = 0)
+        {
+            vidx[0] = start_idx;
+            vidx[1] = end_idx;
+        }
+        int vidx[2];
+    };
+    
+    struct VoronoiDiagramSphere
+    {
+        void clear()
+        {
+            sites.clear();
+            voronoi_verticies.clear();
+            voronoi_edges.clear();
+            delaunay_edges.clear();
+        }
+        
+        std::vector<PointCartesian> sites, voronoi_verticies;
+        
+        std::vector<Edge> voronoi_edges, delaunay_edges;
+    };
     
     struct PointCartesian
     {
@@ -119,24 +140,11 @@ namespace Voronoi
         bool has_cartesian;
     };
     
-    struct VoronoiCellSphere
-    {
-        VoronoiCellSphere(PointSphere point, int _id) : site(point), cell_id(_id) {}
-        
-        VoronoiCellSphere(PointCartesian point, int _id) : site(point), cell_id(_id) {}
-        
-        PointSphere site;
-
-        int cell_id;
-        
-        std::vector<int> edge_ids;
-    };
-    
     struct ArcSphere
-    {        
-        ArcSphere(int _cell_id, int _height) : cell_id(_cell_id), height(_height), event(NULL), left_edge_id(-1), right_edge_id(-1) {}
+    {
+        ArcSphere(int _cell_idx, int _height) : cell_idx(_cell_idx), height(_height), event(NULL), left_edge_idx(-1), right_edge_idx(-1) {}
         
-        int cell_id;
+        int cell_idx;
         
         int height;
         
@@ -144,7 +152,7 @@ namespace Voronoi
         
         CircleEventSphere * event;
         
-        int left_edge_id, right_edge_id;
+        int left_edge_idx, right_edge_idx;
     };
     
     struct CircleEventSphere
@@ -152,55 +160,53 @@ namespace Voronoi
         CircleEventSphere(ArcSphere * a, PointSphere c, Real l) : arc(a), circumcenter(c), lowest_theta(l), is_valid(true) {}
         
         PointSphere circumcenter;
-    
+        
         bool is_valid;
         
         ArcSphere * arc;
         
         Real lowest_theta;
     };
-    
-    struct HalfEdgeSphere
-    {
-        HalfEdgeSphere(PointCartesian s, int left_cell_id, int right_cell_id) : start(s), is_finished(false)
-        {
-            cell_ids[0] = left_cell_id;
-            cell_ids[1] = right_cell_id;
-        }
-        
-        void finish(PointCartesian e)
-        {
-            if (!is_finished)
-            {
-                end = e;
-                is_finished = true;
-            }
-        }
-        
-        PointCartesian start, end;
-        
-        int cell_ids[2];
-        
-        bool is_finished;
-    };
-    
-    struct VoronoiDiagramSphere
-    {
-        std::vector<HalfEdgeSphere> edges;
-        
-        std::vector<VoronoiCellSphere> cells;
-    };
-    
-    
+
     class VoronoiSphere
     {
     public:
         
-        VoronoiDiagramSphere generate_voronoi(float * points, int num_points, void (*render)(VoronoiDiagramSphere, float) = NULL, bool (*is_sleeping)() = NULL);
+        void set_sites(std::vector<std::tuple<float, float, float>> * verts);
         
+        void generate_voronoi(void (*render)(VoronoiDiagramSphere, float) = NULL, bool (*is_sleeping)() = NULL);
+
+        void reset();
+        
+        VoronoiDiagramSphere get_voronoi_diagram() {return voronoi_diagram;}
+    
     private:
         
+        struct VoronoiCellSphere;
+        struct HalfEdgeSphere;
         struct PriorityQueueCompare;
+        
+        struct VoronoiCellSphere
+        {
+            VoronoiCellSphere(PointSphere point, int _idx) : site(point), cell_idx(_idx) {}
+            
+            VoronoiCellSphere(PointCartesian point, int _idx) : site(point), cell_idx(_idx) {}
+            
+            PointSphere site;
+            
+            int cell_idx;
+            
+            std::vector<int> edge_ids;
+        };
+        
+        struct HalfEdgeSphere
+        {
+            HalfEdgeSphere(int vidx) : start_idx(vidx), is_finished(false) {}
+            
+            int start_idx, end_idx;
+            
+            bool is_finished;
+        };
         
         /*
          *  Sort by theta. Smallest theta should be first.
@@ -222,8 +228,11 @@ namespace Voronoi
         std::priority_queue<VoronoiCellSphere, std::vector<VoronoiCellSphere>, PriorityQueueCompare> site_event_queue;
 
         std::priority_queue<CircleEventSphere *, std::vector<CircleEventSphere *>, PriorityQueueCompare> circle_event_queue;
-
         
+        std::vector<HalfEdgeSphere> half_edges;
+        
+        std::vector<VoronoiCellSphere> cells;
+
         
         void handle_site_event(VoronoiCellSphere cell);
         
@@ -237,11 +246,9 @@ namespace Voronoi
         
         inline void make_circle(PointSphere a, PointSphere b, PointSphere c, PointSphere & circumcenter, Real & lowest_theta);
         
-        void initialize_diagram(float * points, int num_points);
+        void add_half_edge_sphere(PointCartesian start, ArcSphere * left, ArcSphere * right);
         
-        void finalize_diagram();
-        
-        void add_half_edge_sphere(PointCartesian p, ArcSphere * left, ArcSphere * right);
+        void finish_half_edge_sphere(int edge_idx, PointCartesian end);
         
         void add_initial_arc_sphere(int cell_id);
         
@@ -252,7 +259,6 @@ namespace Voronoi
         void remove_arc_sphere(ArcSphere * arc);
         
         ArcSphere * traverse_skiplist_to_site(ArcSphere * arc, Real phi);
-
     };
 }
 
