@@ -11,7 +11,7 @@
 #include "SDL2/SDL_opengl.h"
 
 #include "Voronoi2D.h"
-#include "VoronoiSphere.h"
+#include "voronoi_sphere.h"
 
 #define SPHERICAL_MODE
 
@@ -36,10 +36,11 @@ const int num_sites = 4000;
  *  1466178962 (16000 sites)
  *  1466291162 (10000 sites)
  *  1705693518 (4000 sites)
+ *  1468891552 (16000 sites long double)
  */
 
 unsigned int seed = (unsigned int)time(NULL);
-//unsigned int seed = 1705693518;
+//unsigned int seed = 1466178962;
 
 
 #ifndef SPHERICAL_MODE
@@ -55,7 +56,7 @@ void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, float sweep_lin
     bool render_sites = true;
     bool render_voronoi = true;
     bool render_delaunay = true;
-    bool render_sweep_line = false && sweep_line != 0;
+    bool render_sweep_line = true && sweep_line != 0;
  
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
@@ -297,12 +298,8 @@ int main(int argc, const char * argv[]) {
 
     clock_t t = clock();
     
-    VoronoiSphere voronoi;
-
-    voronoi.reset();
-    voronoi.set_sites(&verts);
-    voronoi.generate_voronoi(render_voronoi_sphere, is_sleeping);
-    VoronoiDiagramSphere voronoi_diagram = voronoi.get_voronoi_diagram();
+    VoronoiDiagramSphere voronoi_diagram = generate_voronoi(&verts, render_voronoi_sphere, is_sleeping);
+    //VoronoiDiagramSphere voronoi_diagram = generate_voronoi_parallelized(&verts);
     
     cout << "Generated voronoi from " << num_sites << " sites in " << (clock() - t) / (float)CLOCKS_PER_SEC << " seconds.\n";
     

@@ -8,10 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		E70463321CFF9AB0003197CA /* Voronoi2D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E70463301CFF9AB0003197CA /* Voronoi2D.cpp */; };
-		E70463351D0223D9003197CA /* VoronoiSphere.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E70463331D0223D9003197CA /* VoronoiSphere.cpp */; };
+		E70463351D0223D9003197CA /* voronoi_sphere.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E70463331D0223D9003197CA /* voronoi_sphere.cpp */; };
 		E7AE3CEF1D0F14020083B29C /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E7AE3CEE1D0F14020083B29C /* main.cpp */; };
-		E7AE3CF31D0F16310083B29C /* VoronoiSphere.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E70463331D0223D9003197CA /* VoronoiSphere.cpp */; };
-		E7C4C04E1D09B3830036350B /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = E7C4C04D1D09B3830036350B /* README.md */; };
+		E7AE3CF31D0F16310083B29C /* voronoi_sphere.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E70463331D0223D9003197CA /* voronoi_sphere.cpp */; };
 		E7F6CA521CFF8E7A00B47D59 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E7F6CA511CFF8E7A00B47D59 /* main.cpp */; };
 		E7F6CA591CFF8F6A00B47D59 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E7F6CA581CFF8F6A00B47D59 /* SDL2.framework */; };
 		E7F6CA5B1CFF90AE00B47D59 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E7F6CA5A1CFF90AE00B47D59 /* OpenGL.framework */; };
@@ -41,11 +40,11 @@
 /* Begin PBXFileReference section */
 		E70463301CFF9AB0003197CA /* Voronoi2D.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Voronoi2D.cpp; sourceTree = "<group>"; };
 		E70463311CFF9AB0003197CA /* Voronoi2D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Voronoi2D.h; sourceTree = "<group>"; };
-		E70463331D0223D9003197CA /* VoronoiSphere.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VoronoiSphere.cpp; sourceTree = "<group>"; };
-		E70463341D0223D9003197CA /* VoronoiSphere.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VoronoiSphere.h; sourceTree = "<group>"; };
+		E70463331D0223D9003197CA /* voronoi_sphere.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = voronoi_sphere.cpp; sourceTree = "<group>"; };
+		E70463341D0223D9003197CA /* voronoi_sphere.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = voronoi_sphere.h; sourceTree = "<group>"; };
 		E7AE3CEC1D0F14020083B29C /* speed_test */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = speed_test; sourceTree = BUILT_PRODUCTS_DIR; };
 		E7AE3CEE1D0F14020083B29C /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		E7C4C04D1D09B3830036350B /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
+		E7C4C04D1D09B3830036350B /* README.md */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; path = README.md; sourceTree = SOURCE_ROOT; };
 		E7F6CA4E1CFF8E7A00B47D59 /* Voronoi */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Voronoi; sourceTree = BUILT_PRODUCTS_DIR; };
 		E7F6CA511CFF8E7A00B47D59 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		E7F6CA581CFF8F6A00B47D59 /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2.framework; path = ../../../../Library/Frameworks/SDL2.framework; sourceTree = "<group>"; };
@@ -105,8 +104,8 @@
 			isa = PBXGroup;
 			children = (
 				E7F6CA511CFF8E7A00B47D59 /* main.cpp */,
-				E70463331D0223D9003197CA /* VoronoiSphere.cpp */,
-				E70463341D0223D9003197CA /* VoronoiSphere.h */,
+				E70463331D0223D9003197CA /* voronoi_sphere.cpp */,
+				E70463341D0223D9003197CA /* voronoi_sphere.h */,
 				E70463301CFF9AB0003197CA /* Voronoi2D.cpp */,
 				E70463311CFF9AB0003197CA /* Voronoi2D.h */,
 			);
@@ -190,7 +189,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E7AE3CF31D0F16310083B29C /* VoronoiSphere.cpp in Sources */,
+				E7AE3CF31D0F16310083B29C /* voronoi_sphere.cpp in Sources */,
 				E7AE3CEF1D0F14020083B29C /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -201,8 +200,7 @@
 			files = (
 				E70463321CFF9AB0003197CA /* Voronoi2D.cpp in Sources */,
 				E7F6CA521CFF8E7A00B47D59 /* main.cpp in Sources */,
-				E7C4C04E1D09B3830036350B /* README.md in Sources */,
-				E70463351D0223D9003197CA /* VoronoiSphere.cpp in Sources */,
+				E70463351D0223D9003197CA /* voronoi_sphere.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -321,10 +319,8 @@
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
-				OTHER_CPLUSPLUSFLAGS = (
-					"$(OTHER_CFLAGS)",
-					"-Ofast",
-				);
+				OTHER_CFLAGS = "-Ofast";
+				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -336,10 +332,8 @@
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
-				OTHER_CPLUSPLUSFLAGS = (
-					"$(OTHER_CFLAGS)",
-					"-Ofast",
-				);
+				OTHER_CFLAGS = "-Ofast";
+				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

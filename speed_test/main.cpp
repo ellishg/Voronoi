@@ -7,36 +7,36 @@
 //
 
 /*
- *  Records as of 6/17/16
+ *  Records as of 7/18/16
  *
  *  100 sites:
- *  0.0008778 average
- *  0.001331    max
+ *  0.0007065 average
+ *  0.000964 max
  *
  *  1000 sites:
- *  0.0127625 average
- *  0.02085 max
+ *  0.0118539 average
+ *  0.019233 max
  *
  *  4000 sites:
- *  0.082358 average
- *  0.10838 max
+ *  0.07808 average
+ *  0.114018 max
  *
  *  10000 sites:
- *  0.298549 average
- *  0.369286 max
+ *  0.294484 average
+ *  0.3578 max
  *
  *  16000 sites:
- *  0.617974 average
- *  0.983193 max
+ *  0.54561 average
+ *  0.637421 max
  */
 
 #include <iostream>
-#include "VoronoiSphere.h"
+#include "voronoi_sphere.h"
 
 using namespace std;
 using namespace Voronoi;
 
-const int num_sites = 1000;
+const int num_sites = 4000;
 const int num_trials = 100;
 
 int main(int argc, const char * argv[]) {
@@ -45,8 +45,6 @@ int main(int argc, const char * argv[]) {
     
     clock_t t;
     
-    VoronoiSphere voronoi;
-        
     float total_time = 0;
     
     float max_trial_time = 0;
@@ -78,11 +76,8 @@ int main(int argc, const char * argv[]) {
 
         t = clock();
         
-        voronoi.reset();
-        
-        voronoi.set_sites(&verts);
-        
-        voronoi.generate_voronoi();
+        generate_voronoi(&verts);
+        //generate_voronoi_parallelized(&verts);
         
         float trial_time = (clock() - t) / (float)CLOCKS_PER_SEC;
         
