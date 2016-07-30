@@ -24,31 +24,28 @@ SDL_GLContext context;
 
 const int window_size = 600;
 
-const int num_sites = 4000;
+int num_sites = 4000;
+
+//const THREAD_NUMBER num_threads = ONE_THREAD;
+const THREAD_NUMBER num_threads = TWO_THREADS;
+//const THREAD_NUMBER num_threads = FOUR_THREADS;
+
 /*
  *  Bad seeds:
- *  1714267297 (16000 sites)
- *  1466122514 (16000 sites)
- *  1466122550 (16000 sites)
- *  1466123863 (16000 sites)
- *  1466177950 (16000 sites)
- *  1466178629 (16000 sites)
- *  1466178962 (16000 sites)
- *  1466291162 (10000 sites)
- *  1705693518 (4000 sites)
- *  1468891552 (16000 sites long double)
+ *  1741754784 (8000 sites)
+ *  1252816138 (16000 sites)
+ *  319410050
+ *  660258475
  */
 
 unsigned int seed = (unsigned int)time(NULL);
-//unsigned int seed = 1466178962;
+//unsigned int seed = 1741754784;
 
+VoronoiDiagramSphere voronoi_diagram;
 
 #ifndef SPHERICAL_MODE
 float points[num_sites * 2];
 #endif
-
-const float point_size = 2.f;
-const float line_width = 1.f;
 
 void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, float sweep_line = 0)
 {
@@ -60,8 +57,8 @@ void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, float sweep_lin
  
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    glPointSize(point_size);
-    glLineWidth(line_width);
+    glPointSize(2.f);
+    glLineWidth(1.f);
     
     if (should_rotate)
     {
@@ -72,6 +69,7 @@ void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, float sweep_lin
         float angle = SDL_GetTicks() / 50.f;
         
         glRotatef(angle, 0, 0, 1);
+        glRotatef(angle, 0, 1, 0);
     }
     
     if (render_voronoi)
@@ -80,14 +78,11 @@ void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, float sweep_lin
         glBegin(GL_LINES);
             for (auto edge : voronoi_diagram.voronoi_edges)
             {
-                //if (edge.is_finished)
-                {
-                    PointCartesian start = voronoi_diagram.voronoi_verticies[edge.vidx[0]];
-                    PointCartesian end = voronoi_diagram.voronoi_verticies[edge.vidx[1]];
-                    
-                    glVertex3f(start.x, start.y, start.z);
-                    glVertex3f(end.x, end.y, end.z);
-                }
+                PointCartesian start = voronoi_diagram.voronoi_vertices[edge.vidx[0]];
+                PointCartesian end = voronoi_diagram.voronoi_vertices[edge.vidx[1]];
+                
+                glVertex3f((float)start.x, (float)start.y, (float)start.z);
+                glVertex3f((float)end.x, (float)end.y, (float)end.z);
             }
         glEnd();
     }
@@ -96,13 +91,13 @@ void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, float sweep_lin
     {
         glColor3f(0, 0, 1);
         glBegin(GL_LINES);
-        for (auto edge : voronoi_diagram.delaunay_edges)
-        {
-            PointCartesian start = voronoi_diagram.sites[edge.vidx[0]];
-            PointCartesian end = voronoi_diagram.sites[edge.vidx[1]];
-            glVertex3f(start.x, start.y, start.z);
-            glVertex3f(end.x, end.y, end.z);
-        }
+            for (auto edge : voronoi_diagram.delaunay_edges)
+            {
+                PointCartesian start = voronoi_diagram.sites[edge.vidx[0]];
+                PointCartesian end = voronoi_diagram.sites[edge.vidx[1]];
+                glVertex3f((float)start.x, (float)start.y, (float)start.z);
+                glVertex3f((float)end.x, (float)end.y, (float)end.z);
+            }
         glEnd();
     }
     
@@ -110,10 +105,10 @@ void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, float sweep_lin
     {
         glColor3f(1, 0, 0);
         glBegin(GL_POINTS);
-        for (auto site : voronoi_diagram.sites)
-        {
-            glVertex3f(site.x, site.y, site.z);
-        }
+            for (auto site : voronoi_diagram.sites)
+            {
+                glVertex3f((float)site.x, (float)site.y, (float)site.z);
+            }
         glEnd();
     }
     
@@ -143,14 +138,16 @@ void quit()
     exit(0);
 }
 
-void render_points(float * points, int num_points, float r, float g, float b) {
+void render_points(float * points, int num_points, float r, float g, float b)
+{
     
-    glPointSize(point_size);
+    glPointSize(2.f);
     
     glColor3f(r, g, b);
     
     glBegin(GL_POINTS);
-        for (int i = 0; i < num_points; i++) {
+        for (int i = 0; i < num_points; i++)
+        {
 #ifdef SPHERICAL_MODE
             glVertex3f(points[3 * i], points[3 * i + 1], points[3 * i + 2]);
 #else
@@ -160,12 +157,14 @@ void render_points(float * points, int num_points, float r, float g, float b) {
     glEnd();
 }
 
-void render_edges_2d(vector<HalfEdge2D *> edges) {
+void render_edges_2d(vector<HalfEdge2D *> edges)
+{
     
-    glLineWidth(line_width);
-    glPointSize(point_size);
+    glLineWidth(1.f);
+    glPointSize(2.f);
     
-    for (int i = 0; i < edges.size(); i++) {
+    for (int i = 0; i < edges.size(); i++)
+    {
         
         glColor3f(0.f, 0.f, 0.f);
         
@@ -179,7 +178,8 @@ void render_edges_2d(vector<HalfEdge2D *> edges) {
 }
 
 #ifndef SPHERICAL_MODE
-void render_2d(vector<HalfEdge2D *> edges, float sweep_line = 0) {
+void render_2d(vector<HalfEdge2D *> edges, float sweep_line = 0)
+{
     glClear(GL_COLOR_BUFFER_BIT);
     glLoadIdentity();
 
@@ -195,15 +195,19 @@ void render_2d(vector<HalfEdge2D *> edges, float sweep_line = 0) {
 }
 #endif
 
-bool is_sleeping() {
+bool is_sleeping()
+{
     
-    while (SDL_PollEvent(&event)) {
-        switch (event.type) {
+    while (SDL_PollEvent(&event))
+    {
+        switch (event.type)
+        {
             case SDL_QUIT:
                 quit();
                 break;
             case SDL_KEYDOWN:
-                switch (event.key.keysym.sym) {
+                switch (event.key.keysym.sym)
+                {
                     case SDLK_ESCAPE:
                         quit();
                         break;
@@ -230,30 +234,39 @@ bool is_sleeping() {
                 break;
         }
     }
+    
     return true;
 }
 
-int main(int argc, const char * argv[]) {
+int main(int argc, const char * argv[])
+{
+    if (argc == 2)
+    {
+        num_sites = atoi(argv[1]);
+    }
     
     cout << "Seed = " << seed << endl;
     
     srand(seed);
     
-    if(SDL_Init(SDL_INIT_VIDEO))   {
+    if(SDL_Init(SDL_INIT_VIDEO))
+    {
         cout << "Error initializing video.\n";
         return 0;
     }
     
     window = SDL_CreateWindow("Voronoi", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_size, window_size, SDL_WINDOW_OPENGL);
     
-    if(window == NULL)   {
+    if(window == NULL)
+    {
         cout << "Error creating window.\n";
         return 0;
     }
 
     context = SDL_GL_CreateContext(window);
     
-    if (context == NULL) {
+    if (context == NULL)
+    {
         cout << "Error creating context.\n";
         return 0;
     }
@@ -276,7 +289,8 @@ int main(int argc, const char * argv[]) {
     
     const int precision = numeric_limits<int>::max();
     //const int precision = 10;
-    for (int i = 0; i < num_sites; i++) {
+    for (int i = 0; i < num_sites; i++)
+    {
 #ifdef SPHERICAL_MODE
         float x = (rand() % precision) / (float)precision - 0.5f;
         float y = (rand() % precision) / (float)precision - 0.5f;
@@ -296,12 +310,13 @@ int main(int argc, const char * argv[]) {
 #ifdef SPHERICAL_MODE
     glRotatef(-90, 1, 0, 0);
 
-    clock_t t = clock();
+    auto start_time = chrono::system_clock::now();
     
-    VoronoiDiagramSphere voronoi_diagram = generate_voronoi(&verts, render_voronoi_sphere, is_sleeping);
-    //VoronoiDiagramSphere voronoi_diagram = generate_voronoi_parallelized(&verts);
+    voronoi_diagram = generate_voronoi(&verts, num_threads, render_voronoi_sphere, is_sleeping);
     
-    cout << "Generated voronoi from " << num_sites << " sites in " << (clock() - t) / (float)CLOCKS_PER_SEC << " seconds.\n";
+    chrono::duration<float> run_time = chrono::system_clock::now() - start_time;
+    
+    cout << "Generated voronoi from " << num_sites << " sites in " << run_time.count() << " seconds.\n";
     
 #else
     Voronoi2D voronoi;
@@ -309,7 +324,8 @@ int main(int argc, const char * argv[]) {
     vector<HalfEdge2D *> edges = voronoi.get_voronoi_edges();
 #endif
     
-    while(true) {
+    while(true)
+    {
         
 #ifdef SPHERICAL_MODE
         render_voronoi_sphere(voronoi_diagram);
@@ -317,13 +333,16 @@ int main(int argc, const char * argv[]) {
         render_2d(edges);
 #endif
         
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
+        while (SDL_PollEvent(&event))
+        {
+            switch (event.type)
+            {
                 case SDL_QUIT:
                     quit();
                     break;
                 case SDL_KEYDOWN:
-                    switch (event.key.keysym.sym) {
+                    switch (event.key.keysym.sym)
+                    {
                         case SDLK_ESCAPE:
                             quit();
                             break;
@@ -339,7 +358,27 @@ int main(int argc, const char * argv[]) {
                         case SDLK_RIGHT:
                             glRotatef(10, 0, 0, -1);
                             break;
-                        default:
+                        case SDLK_r:
+                            seed = rand();
+                            cout << "Seed = " << seed << endl;
+                            srand(seed);
+                            vector<tuple<float, float, float>> verts;
+                            
+                            const int precision = numeric_limits<int>::max();
+                            for (int i = 0; i < num_sites; i++)
+                            {
+                                float x = (rand() % precision) / (float)precision - 0.5f;
+                                float y = (rand() % precision) / (float)precision - 0.5f;
+                                float z = (rand() % precision) / (float)precision - 0.5f;
+                                
+                                float r = sqrt(x*x + y*y + z*z);
+                                
+                                tuple<float, float, float> point = make_tuple(x / r, y / r, z / r);
+                                
+                                verts.push_back(point);
+                            }
+
+                            voronoi_diagram = generate_voronoi(&verts, num_threads);
                             break;
                     }
                     break;

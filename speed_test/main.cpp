@@ -7,27 +7,32 @@
 //
 
 /*
- *  Records as of 7/18/16
+ *  Records as of 7/30/16
  *
- *  100 sites:
- *  0.0007065 average
- *  0.000964 max
+ *  1000 sites
+ *  One thread: 0.0110322
+ *  Two threads: 0.00808198
+ *  Four threads: 0.00971464
  *
- *  1000 sites:
- *  0.0118539 average
- *  0.019233 max
+ *  2000 sites
+ *  One thread: 0.0231604
+ *  Two threads: 0.0161947
+ *  Four threads: 0.0200929
  *
  *  4000 sites:
- *  0.07808 average
- *  0.114018 max
+ *  One thread: 0.0630737
+ *  Two threads: 0.0433619
+ *  Four threads: 0.0457458
  *
- *  10000 sites:
- *  0.294484 average
- *  0.3578 max
+ *  8000 sites:
+ *  One thread: 0.163324
+ *  Two threads: 0.105508
+ *  Four threads: 0.115384
  *
  *  16000 sites:
- *  0.54561 average
- *  0.637421 max
+ *  One thread: 0.45876
+ *  Two threads: 0.284353
+ *  Four threads: 0.311399
  */
 
 #include <iostream>
@@ -36,22 +41,26 @@
 using namespace std;
 using namespace Voronoi;
 
-const int num_sites = 4000;
-const int num_trials = 100;
+const int num_sites = 1000;
+const int num_trials = 50;
 
 int main(int argc, const char * argv[]) {
     
     srand((unsigned int)time(NULL));
     
-    clock_t t;
+    chrono::duration<float> total_time_one_thread;
+    chrono::duration<float> total_time_two_threads;
+    chrono::duration<float> total_time_four_threads;
     
-    float total_time = 0;
+    chrono::duration<float> max_trial_time_one_thread = chrono::duration<float>(0);
+    chrono::duration<float> max_trial_time_two_threads = chrono::duration<float>(0);
+    chrono::duration<float> max_trial_time_four_threads = chrono::duration<float>(0);
     
-    float max_trial_time = 0;
+    chrono::time_point<chrono::system_clock> start_time;
+    chrono::duration<float> trial_time;
     
     for (int trial = 1; trial <= num_trials; trial++)
     {
-        
         unsigned int seed = rand();
         
         srand(seed);
@@ -74,25 +83,59 @@ int main(int argc, const char * argv[]) {
             verts.push_back(point);
         }
 
-        t = clock();
+        start_time = chrono::system_clock::now();
         
-        generate_voronoi(&verts);
-        //generate_voronoi_parallelized(&verts);
+        generate_voronoi(&verts, ONE_THREAD);
         
-        float trial_time = (clock() - t) / (float)CLOCKS_PER_SEC;
+        trial_time = chrono::system_clock::now() - start_time;
         
-        total_time += trial_time;
+        total_time_one_thread += trial_time;
         
-        if (trial_time > max_trial_time)
+        if (trial_time > max_trial_time_one_thread)
         {
-            max_trial_time = trial_time;
+            max_trial_time_one_thread = trial_time;
+        }
+
+        start_time = chrono::system_clock::now();
+        
+        generate_voronoi(&verts, TWO_THREADS);
+        
+        trial_time = chrono::system_clock::now() - start_time;
+        
+        total_time_two_threads += trial_time;
+        
+        if (trial_time > max_trial_time_two_threads)
+        {
+            max_trial_time_two_threads = trial_time;
+        }
+
+        start_time = chrono::system_clock::now();
+        
+        generate_voronoi(&verts, FOUR_THREADS);
+        
+        trial_time = chrono::system_clock::now() - start_time;
+        
+        total_time_four_threads += trial_time;
+        
+        if (trial_time > max_trial_time_four_threads)
+        {
+            max_trial_time_four_threads = trial_time;
         }
     }
-    cout << "\nGenerated " << num_trials << " voronoi diagrams with " << num_sites << " sites.\n\n";
     
-    cout << "Total time = " << total_time << " seconds.\n";
-    cout << "Average = " << total_time / num_trials << " seconds.\n";
-    cout << "Max = " << max_trial_time << " seconds.\n\n";
+    cout << "\nGenerated " << num_trials << " voronoi diagrams with " << num_sites << " sites.\n";
+    cout << "One thread:\n";
+    cout << "Total time = " << total_time_one_thread.count() << " seconds.\n";
+    cout << "Average = " << total_time_one_thread.count() / num_trials << " seconds.\n";
+    cout << "Max = " << max_trial_time_one_thread.count() << " seconds.\n\n";
+    cout << "Two threads:\n";
+    cout << "Total time = " << total_time_two_threads.count() << " seconds.\n";
+    cout << "Average = " << total_time_two_threads.count() / num_trials << " seconds.\n";
+    cout << "Max = " << max_trial_time_two_threads.count() << " seconds.\n\n";
+    cout << "Four threads:\n";
+    cout << "Total time = " << total_time_four_threads.count() << " seconds.\n";
+    cout << "Average = " << total_time_four_threads.count() / num_trials << " seconds.\n";
+    cout << "Max = " << max_trial_time_four_threads.count() << " seconds.\n\n";
         
     return 0;
 }

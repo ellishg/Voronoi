@@ -16,8 +16,35 @@
 #include <thread>
 #include <assert.h>
 
+//#include <boost/multiprecision/float128.hpp>
+
+//#include <iomanip>
+
+#define MAX_SKIPLIST_HEIGHT 15
+
+#define TWO_PI_3 2.0943951023931954923084289221863353 // 2 * PI / 3
+#define FOUR_PI_3 4.1887902047863909846168578443726705 // 4 * PI / 3
+
+#define SIN_TWO_PI_3 0.86602540378443864676372317075293618 // sqrt(3) / 2
+#define SIN_FOUR_PI_3 -SIN_TWO_PI_3
+#define COS_TWO_PI_3 -0.5
+#define COS_FOUR_PI_3 COS_TWO_PI_3
+
+#define ARCTAN_2_ROOT_2 1.2309594173407746821349291782479874 // arctan(2 * sqrt(2))
+
+#define ARCSIN_ONE_THIRD_PLUS_PI_2 1.9106332362490185563277142050315155 // arcsin(1/3) + PI/2
+
+#define SIN_ARCSIN_ONE_THIRD_PLUS_PI_2 0.94280904158206336586779248280646539 // 2 * sqrt(2) / 3
+#define COS_ARCSIN_ONE_THIRD_PLUS_PI_2 -0.33333333333333333333333333333333333
+#define SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2 -SIN_ARCSIN_ONE_THIRD_PLUS_PI_2
+#define COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2 COS_ARCSIN_ONE_THIRD_PLUS_PI_2
+
 namespace Voronoi
 {
+    //typedef boost::multiprecision::float128 Real;
+    /*
+     *  To compile: g++ main.cpp voronoi_sphere.cpp -std=c++11 -fext-numeric-literals -framework OpenGL -framework SDL2 -lquadmath -Ofast
+     */
     typedef double Real;
     
     struct Edge;
@@ -31,9 +58,14 @@ namespace Voronoi
     struct CompareTopDown;
     struct CompareBottomUp;
     
-    VoronoiDiagramSphere generate_voronoi(std::vector<std::tuple<float, float, float>> * verts, void (*render)(VoronoiDiagramSphere, float) = NULL, bool (*is_sleeping)() = NULL);
+    enum THREAD_NUMBER
+    {
+        ONE_THREAD = 1,
+        TWO_THREADS = 2,
+        FOUR_THREADS = 4
+    };
     
-    VoronoiDiagramSphere generate_voronoi_parallelized(std::vector<std::tuple<float, float, float>> * verts);
+    VoronoiDiagramSphere generate_voronoi(std::vector<std::tuple<float, float, float>> * verts, THREAD_NUMBER num_threads = ONE_THREAD, void (*render)(VoronoiDiagramSphere, float) = NULL, bool (*is_sleeping)() = NULL);
     
     struct Edge
     {
@@ -42,12 +74,12 @@ namespace Voronoi
             vidx[0] = start_idx;
             vidx[1] = end_idx;
         }
-        int vidx[2];
+        unsigned int vidx[2];
     };
     
     struct VoronoiDiagramSphere
     {
-        std::vector<PointCartesian> sites, voronoi_verticies;
+        std::vector<PointCartesian> sites, voronoi_vertices;
         
         std::vector<Edge> voronoi_edges, delaunay_edges;
     };
@@ -106,7 +138,6 @@ namespace Voronoi
         
         inline friend bool operator<(const PointSphere & left, const PointSphere & right) {return left.theta == right.theta ? left.phi < right.phi : left.theta < right.theta;}
         inline friend bool operator>(const PointSphere & left, const PointSphere & right) {return left.theta == right.theta ? left.phi > right.phi : left.theta > right.theta;}
-        friend bool operator==(const PointSphere & left, const PointSphere & right) {return left.theta == right.theta && left.phi == right.phi;}
         
         friend std::ostream & operator<<(std::ostream & out, const PointSphere & p) {return out << "(" << p.theta << ", " << p.phi << ")\n";}
         
@@ -144,7 +175,7 @@ namespace Voronoi
     {
         ArcSphere(int _cell_idx, int _height) : cell_idx(_cell_idx), height(_height), event(NULL), left_edge_idx(-1), right_edge_idx(-1) {}
         
-        int cell_idx;
+        unsigned int cell_idx;
         
         int height;
         
@@ -176,7 +207,7 @@ namespace Voronoi
         
         PointSphere site;
         
-        int cell_idx;
+        unsigned int cell_idx;
         
         std::vector<int> edge_ids;
     };
@@ -199,8 +230,13 @@ namespace Voronoi
         bool operator()(CircleEventSphere * left, CircleEventSphere * right) {return left->lowest_theta > right->lowest_theta;}
     };
     
+    VoronoiDiagramSphere generate_voronoi_one_thread(std::vector<std::tuple<float, float, float>> * verts, void (*render)(VoronoiDiagramSphere, float) = NULL, bool (*is_sleeping)() = NULL);
     
-    void compute_priority_queues(VoronoiDiagramSphere * voronoi_diagram, std::vector<std::tuple<float, float, float>> * verts, bool is_top_down);
+    VoronoiDiagramSphere generate_voronoi_two_threads(std::vector<std::tuple<float, float, float>> * verts);
+    
+    VoronoiDiagramSphere generate_voronoi_four_threads(std::vector<std::tuple<float, float, float>> * verts);
+        
+    void compute_priority_queues(VoronoiDiagramSphere * voronoi_diagram, std::vector<std::tuple<float, float, float>> * verts, Real bound_theta);
     
     void handle_site_event(VoronoiCellSphere cell, VoronoiDiagramSphere * voronoi_diagram, std::vector<VoronoiCellSphere> * cells, std::vector<HalfEdgeSphere> * half_edges, std::priority_queue<CircleEventSphere *, std::vector<CircleEventSphere *>, PriorityQueueCompare> * circle_event_queue_ptr, ArcSphere * & beach_head, Real sweep_line, Real sin_sweep_line, Real cos_sweep_line);
     
@@ -227,6 +263,12 @@ namespace Voronoi
     void remove_arc_sphere(ArcSphere * arc, ArcSphere * & beach_head);
     
     ArcSphere * traverse_skiplist_to_site(ArcSphere * arc, Real phi, std::vector<VoronoiCellSphere> * cells);
+    
+    template <typename T>
+    inline std::tuple<T, T, T> rotate_y(std::tuple<T, T, T> point, T sin_theta, T cos_theta);
+    
+    template <typename T>
+    inline std::tuple<T, T, T> rotate_z(std::tuple<T, T, T> point, T sin_theta, T cos_theta);
 }
 
 #endif /* VoronoiSphere_h */

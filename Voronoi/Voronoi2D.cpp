@@ -19,7 +19,7 @@ void Voronoi2D::generate_voronoi_2D(float * points, int num_points, void (*rende
     X1 = Y1 = 0;
     
     beach_head = NULL;
-    //voronoi_verticies.clear();
+    //voronoi_vertices.clear();
     voronoi_edges.clear();
     while (!circle_event_queue.empty()) {
         circle_event_queue.pop();

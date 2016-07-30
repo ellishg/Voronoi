@@ -11,55 +11,181 @@
 using namespace std;
 
 namespace Voronoi {
-
-    VoronoiDiagramSphere generate_voronoi_parallelized(vector<tuple<float, float, float>> * verts)
+    
+    VoronoiDiagramSphere generate_voronoi(std::vector<std::tuple<float, float, float>> * verts, THREAD_NUMBER num_threads, void (*render)(VoronoiDiagramSphere, float), bool (*is_sleeping)())
     {
-        VoronoiDiagramSphere diagram_top_down, diagram_bottom_up;
-     
-        thread diagram_top_down_thread(compute_priority_queues, &diagram_top_down, verts, true);
-        
-        compute_priority_queues(&diagram_bottom_up, verts, false);
+        switch (num_threads) {
+            case ONE_THREAD:
+                return generate_voronoi_one_thread(verts, render, is_sleeping);
+                break;
+            case TWO_THREADS:
+                return generate_voronoi_two_threads(verts);
+                break;
+            case FOUR_THREADS:
+                return generate_voronoi_four_threads(verts);
+                break;
+        }
+    }
 
-        diagram_top_down_thread.join();
+    VoronoiDiagramSphere generate_voronoi_four_threads(vector<tuple<float, float, float>> * verts)
+    {
+        /*
+         *  The voronoi diagram is computed from sites on the sphere corresponding
+         *  to the point on a regular tetrahedron. The sweepline needs to continue
+         *  until it has a radius of ARCTAN_2_ROOT_2. This value was obtained
+         *  from the radius of the circumcircle from three points of the tetrahedron.
+         *  A: (0, 0)
+         *  B: (arcsin(1/3) + PI/2, 0)
+         *  C: (arcsin(1/3) + PI/2, 2PI/3)
+         *  D: (arcsin(1/3) + PI/2, 4PI/3)
+         */
         
-        unsigned long site_length = diagram_top_down.sites.size();
-        unsigned long verticies_length = diagram_top_down.voronoi_verticies.size();
+        VoronoiDiagramSphere diagram_a, diagram_b, diagram_c, diagram_d;
         
-        for (auto site : diagram_bottom_up.sites)
+        vector<tuple<float, float, float>> b_verts, c_verts, d_verts;
+        
+        for (auto point : *verts)
         {
-            diagram_top_down.sites.push_back(site);
+            // We transform vertices to corresponding points on the tetrahedron
+            auto b = rotate_y<float>(point, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            
+            auto c = rotate_z<float>(point, SIN_TWO_PI_3, COS_TWO_PI_3);
+            c = rotate_y<float>(c, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            
+            auto d = rotate_z<float>(point, SIN_FOUR_PI_3, COS_FOUR_PI_3);
+            d = rotate_y<float>(d, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            
+            b_verts.push_back(b);
+            c_verts.push_back(c);
+            d_verts.push_back(d);
         }
         
-        for (auto vertex : diagram_bottom_up.voronoi_verticies)
+        thread b_thread(compute_priority_queues, &diagram_b, &b_verts, ARCTAN_2_ROOT_2);
+        thread c_thread(compute_priority_queues, &diagram_c, &c_verts, ARCTAN_2_ROOT_2);
+        thread d_thread(compute_priority_queues, &diagram_d, &d_verts, ARCTAN_2_ROOT_2);
+        
+        compute_priority_queues(&diagram_a, verts, ARCTAN_2_ROOT_2);
+        
+        b_thread.join();
+        c_thread.join();
+        d_thread.join();
+        
+        unsigned long a_voronoi_vertex_length = diagram_a.voronoi_vertices.size();
+        unsigned long b_voronoi_vertex_length = diagram_b.voronoi_vertices.size();
+        unsigned long c_voronoi_vertex_length = diagram_c.voronoi_vertices.size();
+
+        // Merge the voronoi vertices
+        for (int i = 0; i < diagram_b.voronoi_vertices.size(); i++)
         {
-            diagram_top_down.voronoi_verticies.push_back(vertex);
+            auto vert = diagram_b.voronoi_vertices[i];
+            auto transformed_vert = rotate_y<Real>(make_tuple(vert.x, vert.y, vert.z), SIN_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            
+            diagram_a.voronoi_vertices.push_back(PointCartesian(get<0>(transformed_vert), get<1>(transformed_vert), get<2>(transformed_vert)));
+        }
+        for (int i = 0; i < diagram_c.voronoi_vertices.size(); i++)
+        {
+            auto vert = diagram_c.voronoi_vertices[i];
+            auto transformed_vert = rotate_y<Real>(make_tuple(vert.x, vert.y, vert.z), SIN_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            transformed_vert = rotate_z<Real>(transformed_vert, SIN_FOUR_PI_3, COS_FOUR_PI_3);
+            
+            diagram_a.voronoi_vertices.push_back(PointCartesian(get<0>(transformed_vert), get<1>(transformed_vert), get<2>(transformed_vert)));
+        }
+        for (int i = 0; i < diagram_d.voronoi_vertices.size(); i++)
+        {
+            auto vert = diagram_d.voronoi_vertices[i];
+            auto transformed_vert = rotate_y<Real>(make_tuple(vert.x, vert.y, vert.z), SIN_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            transformed_vert = rotate_z<Real>(transformed_vert, SIN_TWO_PI_3, COS_TWO_PI_3);
+            
+            diagram_a.voronoi_vertices.push_back(PointCartesian(get<0>(transformed_vert), get<1>(transformed_vert), get<2>(transformed_vert)));
+        }
+
+        // Merge the voronoi edges
+        for (auto voronoi_edge : diagram_b.voronoi_edges)
+        {
+            voronoi_edge.vidx[0] += a_voronoi_vertex_length;
+            voronoi_edge.vidx[1] += a_voronoi_vertex_length;
+
+            diagram_a.voronoi_edges.push_back(voronoi_edge);
+        }
+        for (auto voronoi_edge : diagram_c.voronoi_edges)
+        {
+            voronoi_edge.vidx[0] += a_voronoi_vertex_length + b_voronoi_vertex_length;
+            voronoi_edge.vidx[1] += a_voronoi_vertex_length + b_voronoi_vertex_length;
+            
+            diagram_a.voronoi_edges.push_back(voronoi_edge);
+        }
+        for (auto voronoi_edge : diagram_d.voronoi_edges)
+        {
+            voronoi_edge.vidx[0] += a_voronoi_vertex_length + b_voronoi_vertex_length + c_voronoi_vertex_length;
+            voronoi_edge.vidx[1] += a_voronoi_vertex_length + b_voronoi_vertex_length + c_voronoi_vertex_length;
+            
+            diagram_a.voronoi_edges.push_back(voronoi_edge);
+        }
+        
+        // Merge the delaunay edges
+        for (auto delaunay_edge : diagram_b.delaunay_edges)
+        {
+            diagram_a.delaunay_edges.push_back(delaunay_edge);
+        }
+        for (auto delaunay_edge : diagram_c.delaunay_edges)
+        {
+            diagram_a.delaunay_edges.push_back(delaunay_edge);
+        }
+        for (auto delaunay_edge : diagram_d.delaunay_edges)
+        {
+            diagram_a.delaunay_edges.push_back(delaunay_edge);
+        }
+
+        return diagram_a;
+    }
+
+    VoronoiDiagramSphere generate_voronoi_two_threads(vector<tuple<float, float, float>> * verts)
+    {
+        VoronoiDiagramSphere diagram_top_down, diagram_bottom_up;
+        
+        vector<tuple<float, float, float>> bottom_up_verts;
+        
+        for (auto point : *verts)
+        {
+            bottom_up_verts.push_back(make_tuple(get<0>(point), get<1>(point), -get<2>(point)));
+        }
+     
+        // Create a new thread to process the southern hemisphere
+        thread diagram_bottom_up_thread(compute_priority_queues, &diagram_bottom_up, &bottom_up_verts, M_PI_2);
+        
+        compute_priority_queues(&diagram_top_down, verts, M_PI_2);
+
+        diagram_bottom_up_thread.join();
+        
+        // Merge the two voronoi diagrams
+        unsigned int vertices_length = (unsigned int)diagram_top_down.voronoi_vertices.size();
+        
+        for (auto vertex : diagram_bottom_up.voronoi_vertices)
+        {
+            diagram_top_down.voronoi_vertices.push_back(PointCartesian(vertex.x, vertex.y, -vertex.z));
         }
         
         for (auto voronoi_edge : diagram_bottom_up.voronoi_edges)
         {
-            voronoi_edge.vidx[0] += verticies_length;
-            voronoi_edge.vidx[1] += verticies_length;
+            voronoi_edge.vidx[0] += vertices_length;
+            voronoi_edge.vidx[1] += vertices_length;
             
             diagram_top_down.voronoi_edges.push_back(voronoi_edge);
         }
         
         for (auto delaunay_edge : diagram_bottom_up.delaunay_edges)
         {
-            delaunay_edge.vidx[0] += site_length;
-            delaunay_edge.vidx[1] += site_length;
-            
             diagram_top_down.delaunay_edges.push_back(delaunay_edge);
         }
         
         return diagram_top_down;
-        
     }
-
-    void compute_priority_queues(VoronoiDiagramSphere * voronoi_diagram, vector<tuple<float, float, float>> * verts, bool is_top_down)
-    {
-        ArcSphere * beach_head = NULL;
-        
+    
+    void compute_priority_queues(VoronoiDiagramSphere * voronoi_diagram, vector<tuple<float, float, float>> * verts, Real bound_theta)
+    {        
         Real sweep_line = 0;
+        
+        ArcSphere * beach_head = NULL;
                 
         vector<HalfEdgeSphere> half_edges;
         
@@ -71,28 +197,41 @@ namespace Voronoi {
         
         for (auto point : *verts)
         {
-            Real z_value = get<2>(point);
+            PointCartesian point_cartesian = PointCartesian(get<0>(point), get<1>(point), get<2>(point));
+   
+            VoronoiCellSphere cell = VoronoiCellSphere(point_cartesian, (unsigned int)cells.size());
             
-            if ((is_top_down && z_value >= 0) || (!is_top_down && z_value < 0))
-            {
-                PointCartesian point_cartesian = PointCartesian(get<0>(point), get<1>(point), z_value);
-
-                if (!is_top_down) {point_cartesian.z *= -1;}
-       
-                VoronoiCellSphere cell = VoronoiCellSphere(point_cartesian, (int)cells.size());
-                
-                site_event_queue.push(cell);
-                
-                cells.push_back(cell);
-                
-                voronoi_diagram->sites.push_back(point_cartesian);
-            }
+            site_event_queue.push(cell);
+            
+            cells.push_back(cell);
+            
+            voronoi_diagram->sites.push_back(point_cartesian);
         }
         
-        while (sweep_line <= M_PI_2 && (!site_event_queue.empty() || !circle_event_queue.empty()))
+        while (!site_event_queue.empty() || !circle_event_queue.empty())
         {
+            if (sweep_line > bound_theta)
+            {
+                // We need to check if this hemisphere is finished
+                bool is_finished = true;
+                ArcSphere * cur = beach_head;
+                do
+                {
+                    if (cells[cur->cell_idx].site.theta < bound_theta)
+                    {
+                        // There is still a site in the beachline we need to process
+                        is_finished = false;
+                        break;
+                    }
+                } while ((cur = cur->next[0]) != beach_head);
+
+                if (is_finished) {break;} // We have finished this hemisphere
+            }
+            
             if (!circle_event_queue.empty() && !circle_event_queue.top()->is_valid)
             {
+                // Remove invalid circle events
+                delete circle_event_queue.top();
                 circle_event_queue.pop();
             }
             else if (site_event_queue.empty() || (!circle_event_queue.empty() && site_event_queue.top().site.theta > circle_event_queue.top()->lowest_theta))
@@ -112,20 +251,23 @@ namespace Voronoi {
             }
         }
         
-        if (!is_top_down)
+        // Clean up
+        while (beach_head->next[0] != beach_head && beach_head->prev[0] != beach_head)
         {
-            for (int i = 0; i < voronoi_diagram->sites.size(); i++)
-            {
-                voronoi_diagram->sites[i].z *= -1;
-            }
-            for (int i = 0; i < voronoi_diagram->voronoi_verticies.size(); i++)
-            {
-                voronoi_diagram->voronoi_verticies[i].z *= -1;
-            }
+            // Deallocate the beachline
+            remove_arc_sphere(beach_head, beach_head);
+        }
+        remove_arc_sphere(beach_head, beach_head);
+        
+        while (!circle_event_queue.empty())
+        {
+            // Deallocate all the remaining circle events
+            delete circle_event_queue.top();
+            circle_event_queue.pop();
         }
     }
 
-    VoronoiDiagramSphere generate_voronoi(vector<tuple<float, float, float>> * verts, void (*render)(VoronoiDiagramSphere, float), bool (*is_sleeping)())
+    VoronoiDiagramSphere generate_voronoi_one_thread(vector<tuple<float, float, float>> * verts, void (*render)(VoronoiDiagramSphere, float), bool (*is_sleeping)())
     {
         bool should_render = (false) && render != NULL && is_sleeping != NULL;
 
@@ -133,7 +275,7 @@ namespace Voronoi {
         
         ArcSphere * beach_head = NULL;
         
-        Real sweep_line;
+        Real sweep_line = 0;
         
         vector<HalfEdgeSphere> half_edges;
         
@@ -147,7 +289,7 @@ namespace Voronoi {
         {
             PointCartesian point_cartesian = PointCartesian(get<0>(point), get<1>(point), get<2>(point));
             
-            VoronoiCellSphere cell = VoronoiCellSphere(point_cartesian, (int)cells.size());
+            VoronoiCellSphere cell = VoronoiCellSphere(point_cartesian, (unsigned int)cells.size());
             
             site_event_queue.push(cell);
             
@@ -158,10 +300,15 @@ namespace Voronoi {
         
         while (!site_event_queue.empty() || !circle_event_queue.empty())
         {
+            
+            //if (sweep_line >= 2.11777) {should_render = true;}
+            
             //cout << "[" << site_event_queue.size() << ", " << circle_event_queue.size() << "]\n";
             
             if (!circle_event_queue.empty() && !circle_event_queue.top()->is_valid)
             {
+                // Remove invalid circle events
+                delete circle_event_queue.top();
                 circle_event_queue.pop();
             }
             else if (site_event_queue.empty() || (!circle_event_queue.empty() && circle_event_queue.top()->lowest_theta < site_event_queue.top().site.theta))
@@ -169,12 +316,12 @@ namespace Voronoi {
                 CircleEventSphere * circle = circle_event_queue.top();
                 sweep_line = circle->lowest_theta;
                 handle_circle_event(circle, &voronoi_diagram, &cells, &half_edges, &circle_event_queue, beach_head);
-                circle_event_queue.pop();
                 delete circle;
+                circle_event_queue.pop();
                 
                 while (should_render && is_sleeping())
                 {
-                    render(voronoi_diagram, sweep_line);
+                    render(voronoi_diagram, (float)sweep_line);
                 }
             }
             else
@@ -186,10 +333,18 @@ namespace Voronoi {
                 
                 while (should_render && is_sleeping())
                 {
-                    render(voronoi_diagram, sweep_line);
+                    render(voronoi_diagram, (float)sweep_line);
                 }
             }
         }
+        
+        // Clean up
+        while (beach_head->next[0] != beach_head && beach_head->prev[0] != beach_head)
+        {
+            // Deallocate the beachline
+            remove_arc_sphere(beach_head, beach_head);
+        }
+        remove_arc_sphere(beach_head, beach_head);
         
         // The final two edges need to be connected.
         for (int i = 0; i < half_edges.size(); i++)
@@ -200,8 +355,8 @@ namespace Voronoi {
                 {
                     if (!half_edges[k].is_finished)
                     {
-                        finish_half_edge_sphere(&voronoi_diagram, &half_edges, i, voronoi_diagram.voronoi_verticies[half_edges[k].start_idx]);
-                        finish_half_edge_sphere(&voronoi_diagram, &half_edges, k, voronoi_diagram.voronoi_verticies[half_edges[i].start_idx]);
+                        finish_half_edge_sphere(&voronoi_diagram, &half_edges, i, voronoi_diagram.voronoi_vertices[half_edges[k].start_idx]);
+                        finish_half_edge_sphere(&voronoi_diagram, &half_edges, k, voronoi_diagram.voronoi_vertices[half_edges[i].start_idx]);
                         
                         return voronoi_diagram;
                     }
@@ -216,7 +371,7 @@ namespace Voronoi {
 
     void handle_site_event(VoronoiCellSphere cell, VoronoiDiagramSphere * voronoi_diagram, vector<VoronoiCellSphere> * cells, vector<HalfEdgeSphere> * half_edges, priority_queue<CircleEventSphere *, vector<CircleEventSphere *>, PriorityQueueCompare> * circle_event_queue_ptr, ArcSphere * & beach_head, Real sweep_line, Real sin_sweep_line, Real cos_sweep_line)
     {
-        //cout << "Handle site event.\n" << cell.site;
+        //cout << "Handle site event " << cell.site;
         
         if (beach_head == NULL)
         {
@@ -254,7 +409,8 @@ namespace Voronoi {
             PointSphere prev_site = (*cells)[arc->prev[0]->cell_idx].site;
             PointSphere next_site = (*cells)[arc->next[0]->cell_idx].site;
 
-            Real phi_start, phi_end;
+            Real phi_start = 0;
+            Real phi_end = 0;
             
             bool valid_arc = parabolic_intersection(prev_site, cur_site, phi_start, beach_head, sweep_line, sin_sweep_line, cos_sweep_line) && parabolic_intersection(cur_site, next_site, phi_end, beach_head, sweep_line, sin_sweep_line, cos_sweep_line);
             
@@ -268,14 +424,15 @@ namespace Voronoi {
                 
                 add_arc_sphere(cell.cell_idx, arc, arc->next[0], beach_head);
                 cout << "Two arcs interesect at the north pole.\n";
-                //assert(0);
+                assert(0);
                 return;
             }
             else if (valid_arc && ((phi_start < phi_end && phi_start <= cell.site.phi && cell.site.phi <= phi_end) || (phi_start > phi_end && (phi_start <= cell.site.phi || cell.site.phi <= phi_end))))
             {
                 // The arc is found!
+                //cout << setprecision(20);
                 //cout << phi_start << ", " << phi_end << endl;
-                //cout << voronoi_diagram.cells[arc->cell_id].site << cell.site << voronoi_diagram.cells[arc->next[0]->cell_id].site << sweep_line << "\n\n";
+                //cout << (*cells)[arc->cell_idx].site << cell.site << (*cells)[arc->next[0]->cell_idx].site << sweep_line << "\n\n";
                 
                 if (arc->event != NULL)
                 {
@@ -313,6 +470,7 @@ namespace Voronoi {
                 left = left->prev[0];
             }
             
+            //if (sweep_line > 2.11777) {cout << "Next site " << (*cells)[arc->cell_idx].site;}
             move_right = !move_right;
         }
     }
@@ -376,7 +534,7 @@ namespace Voronoi {
         
         make_circle(prev_site, cur_site, next_site, circumcenter, lowest_theta);
         
-        //This if statement causes errors for some reason...
+        //This if statement breaks my code for some reason...
         //if (lowest_theta > sweep_line)
         {
             arc->event = new CircleEventSphere(arc, circumcenter, lowest_theta);
@@ -408,10 +566,10 @@ namespace Voronoi {
              *  Both sites are on the sweep line so our intersection is at the north pole.
              *  We need to handle this special case.
              */
-            //cout << "Intersection is at north pole.\n";
+            cout << "Intersection is at north pole.\n";
             return false;
         }
-        else if (left.theta == sweep_line /*&& right.theta < sweep_line*/)
+        else if (left.theta == sweep_line)
         {
             /*
              *  The left site is on our sweep line so it contains our intersection phi.
@@ -420,7 +578,7 @@ namespace Voronoi {
             //cout << "Left site is on sweep line.\n";
             return true;
         }
-        else if (right.theta == sweep_line /*&& left.theta < sweep_line*/)
+        else if (right.theta == sweep_line)
         {
             /*
              *  The right site is on our sweep line so it contains our intersection phi.
@@ -453,13 +611,13 @@ namespace Voronoi {
         Real b = cos_minus_cos_right * u.y - cos_minus_cos_left * v.y;
         
         Real e = (cos_left_theta - cos_right_theta) * sin_sweep_line;
-        
+
         Real sqrt_a_b = sqrt(a*a + b*b);
         
         if (abs(e) > sqrt_a_b)
         {
             /*
-             *  Theoretically this is impossible becasue as the sweep line
+             *  Theoretically this is impossible because as the sweep line
              *  approaches either the left or right theta e / sqrt_a_b approaches
              *  1. In reality, e can be greater than sqrt_a_b due to rounding.
              *  This excecutes when a site is close enought to the sweep line
@@ -467,7 +625,7 @@ namespace Voronoi {
              *  The lower site contains the phi of our intersection.
              */
             phi_intersection = (left.theta > right.theta) ? left.phi : right.phi;
-            //cout << "Arc is close to sweep line. " << setprecision(50) << abs(e) << " > " << sqrt_a_b << endl << left << right << sweep_line << endl;
+            //cout << "Arc is close to sweep line. " << /*setprecision(50) <<*/ abs(e) << " > " << sqrt_a_b << endl << left << right << sweep_line << endl;
             return true;
         }
         
@@ -481,7 +639,7 @@ namespace Voronoi {
         {
             phi_intersection -= 2 * M_PI;
         }
-        else if (phi_intersection < -M_PI)
+        else if (phi_intersection <= -M_PI)
         {
             phi_intersection += 2 * M_PI;
         }
@@ -566,11 +724,11 @@ namespace Voronoi {
     void add_half_edge_sphere(VoronoiDiagramSphere * voronoi_diagram, vector<VoronoiCellSphere> * cells, vector<HalfEdgeSphere> * half_edges, PointCartesian start, ArcSphere * left, ArcSphere *right)
     {
         int edge_id = (int)half_edges->size();
-        int voronoi_vertex_id = (int)voronoi_diagram->voronoi_verticies.size();
+        int voronoi_vertex_id = (int)voronoi_diagram->voronoi_vertices.size();
         
         voronoi_diagram->delaunay_edges.push_back(Edge(left->cell_idx, right->cell_idx));
         
-        voronoi_diagram->voronoi_verticies.push_back(start);
+        voronoi_diagram->voronoi_vertices.push_back(start);
         
         HalfEdgeSphere half_edge(voronoi_vertex_id);
         half_edges->push_back(half_edge);
@@ -585,10 +743,10 @@ namespace Voronoi {
     {
         if (!(*half_edges)[edge_idx].is_finished)
         {
-            (*half_edges)[edge_idx].end_idx = (int)voronoi_diagram->voronoi_verticies.size();
+            (*half_edges)[edge_idx].end_idx = (int)voronoi_diagram->voronoi_vertices.size();
             (*half_edges)[edge_idx].is_finished = true;
             
-            voronoi_diagram->voronoi_verticies.push_back(end);
+            voronoi_diagram->voronoi_vertices.push_back(end);
             
             voronoi_diagram->voronoi_edges.push_back(Edge((*half_edges)[edge_idx].start_idx, (*half_edges)[edge_idx].end_idx));
         }
@@ -598,99 +756,58 @@ namespace Voronoi {
     {
         int level = arc->height - 1;
         
-        bool move_right = true;
-        
         while (level >= 0)
         {
             Real delta = abs(phi - (*cells)[arc->cell_idx].site.phi);
             if (delta > M_PI) {delta = 2.f * M_PI - delta;}
             
             Real next_delta = abs(phi - (*cells)[arc->next[level]->cell_idx].site.phi);
-            if (next_delta > M_PI) {delta = 2.f * M_PI - next_delta;}
+            if (next_delta > M_PI) {next_delta = 2.f * M_PI - next_delta;}
 
             Real prev_delta = abs(phi - (*cells)[arc->prev[level]->cell_idx].site.phi);
-            if (prev_delta > M_PI) {delta = 2.f * M_PI - prev_delta;}
-
-            if (next_delta < delta && prev_delta > delta)
+            if (prev_delta > M_PI) {prev_delta = 2.f * M_PI - prev_delta;}
+            
+            if (next_delta < delta && next_delta < prev_delta) // if next_delta is the min
             {
                 arc = arc->next[level];
-                if (!move_right) {level--;}
-                move_right = true;
             }
-            else if (prev_delta < delta && next_delta > delta)
+            else if (prev_delta < delta) // if prev_delta is the min
             {
                 arc = arc->prev[level];
-                if (move_right) {level--;}
-                move_right = false;
             }
-            else// if (next_delta >= delta && prev_delta >= delta)
+            else // if delta is the min
             {
                 level--;
             }
         }
         return arc;
     }
-
+    
+    template <typename T>
+    tuple<T, T, T> rotate_y(tuple<T, T, T> point, T sin_theta, T cos_theta)
+    {
+        T x = get<0>(point);
+        T y = get<1>(point);
+        T z = get<2>(point);
+        
+        return make_tuple(cos_theta * x - sin_theta * z, y, sin_theta * x + cos_theta * z);
+    }
+    
+    template <typename T>
+    tuple<T, T, T> rotate_z(tuple<T, T, T> point, T sin_theta, T cos_theta)
+    {
+        T x = get<0>(point);
+        T y = get<1>(point);
+        T z = get<2>(point);
+        
+        return make_tuple(cos_theta * x + sin_theta * y, cos_theta * y - sin_theta * x, z);
+    }
+    
     int random_height()
     {
-        int r = rand() % 32767;
-        
-        if (r < 16384)
-        {
-            return 1;
-        }
-        else if (r < 24576)
-        {
-            return 2;
-        }
-        else if (r < 28672)
-        {
-            return 3;
-        }
-        else if (r < 30720)
-        {
-            return 4;
-        }
-        else if (r < 31744)
-        {
-            return 5;
-        }
-        else if (r < 32256)
-        {
-            return 6;
-        }
-        else if (r < 32512)
-        {
-            return 7;
-        }
-        else if (r < 32640)
-        {
-            return 8;
-        }
-        else if (r < 32704)
-        {
-            return 9;
-        }
-        else if (r < 32736)
-        {
-            return 10;
-        }
-        else if (r < 32752)
-        {
-            return 11;
-        }
-        else if (r < 32760)
-        {
-            return 12;
-        }
-        else if (r < 32764)
-        {
-            return 13;
-        }
-        else if (r < 32766)
-        {
-            return 14;
-        }
-        return 15;
+        int height = MAX_SKIPLIST_HEIGHT;
+        int r = (rand() % (0b1 << MAX_SKIPLIST_HEIGHT)) + 1;
+        while (--height > 0 && r < (0b1 << height));
+        return MAX_SKIPLIST_HEIGHT - height;
     }
 }

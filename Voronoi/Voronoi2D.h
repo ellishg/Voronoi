@@ -83,7 +83,7 @@ namespace Voronoi {
         
         bool make_circle(Point2D a, Point2D b, Point2D c, Point2D & circumcenter, float & right_most_x);
         
-        //vector<Point2D> voronoi_verticies;
+        //vector<Point2D> voronoi_vertices;
         
         std::vector<HalfEdge2D *> voronoi_edges;
         
