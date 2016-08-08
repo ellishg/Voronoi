@@ -47,13 +47,13 @@ namespace Voronoi {
         for (auto point : *verts)
         {
             // We transform vertices to corresponding points on the tetrahedron
-            auto b = rotate_y<Real>(point, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            auto b = rotate_y(point, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
             
-            auto c = rotate_z<Real>(point, SIN_TWO_PI_3, COS_TWO_PI_3);
-            c = rotate_y<Real>(c, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            auto c = rotate_z(point, SIN_TWO_PI_3, COS_TWO_PI_3);
+            c = rotate_y(c, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
             
-            auto d = rotate_z<Real>(point, SIN_FOUR_PI_3, COS_FOUR_PI_3);
-            d = rotate_y<Real>(d, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            auto d = rotate_z(point, SIN_FOUR_PI_3, COS_FOUR_PI_3);
+            d = rotate_y(d, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
             
             b_verts.push_back(b);
             c_verts.push_back(c);
@@ -78,23 +78,23 @@ namespace Voronoi {
         for (int i = 0; i < diagram_b.voronoi_vertices.size(); i++)
         {
             auto vert = diagram_b.voronoi_vertices[i];
-            auto transformed_vert = rotate_y<Real>(make_tuple(vert.x, vert.y, vert.z), SIN_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            auto transformed_vert = rotate_y(make_tuple(vert.x, vert.y, vert.z), SIN_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_ARCSIN_ONE_THIRD_PLUS_PI_2);
             
             diagram_a.voronoi_vertices.push_back(PointCartesian(get<0>(transformed_vert), get<1>(transformed_vert), get<2>(transformed_vert)));
         }
         for (int i = 0; i < diagram_c.voronoi_vertices.size(); i++)
         {
             auto vert = diagram_c.voronoi_vertices[i];
-            auto transformed_vert = rotate_y<Real>(make_tuple(vert.x, vert.y, vert.z), SIN_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_ARCSIN_ONE_THIRD_PLUS_PI_2);
-            transformed_vert = rotate_z<Real>(transformed_vert, SIN_FOUR_PI_3, COS_FOUR_PI_3);
+            auto transformed_vert = rotate_y(make_tuple(vert.x, vert.y, vert.z), SIN_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            transformed_vert = rotate_z(transformed_vert, SIN_FOUR_PI_3, COS_FOUR_PI_3);
             
             diagram_a.voronoi_vertices.push_back(PointCartesian(get<0>(transformed_vert), get<1>(transformed_vert), get<2>(transformed_vert)));
         }
         for (int i = 0; i < diagram_d.voronoi_vertices.size(); i++)
         {
             auto vert = diagram_d.voronoi_vertices[i];
-            auto transformed_vert = rotate_y<Real>(make_tuple(vert.x, vert.y, vert.z), SIN_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_ARCSIN_ONE_THIRD_PLUS_PI_2);
-            transformed_vert = rotate_z<Real>(transformed_vert, SIN_TWO_PI_3, COS_TWO_PI_3);
+            auto transformed_vert = rotate_y(make_tuple(vert.x, vert.y, vert.z), SIN_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            transformed_vert = rotate_z(transformed_vert, SIN_TWO_PI_3, COS_TWO_PI_3);
             
             diagram_a.voronoi_vertices.push_back(PointCartesian(get<0>(transformed_vert), get<1>(transformed_vert), get<2>(transformed_vert)));
         }
@@ -803,22 +803,20 @@ namespace Voronoi {
         return arc;
     }
     
-    template <typename T>
-    tuple<T, T, T> rotate_y(tuple<T, T, T> point, T sin_theta, T cos_theta)
+    tuple<Real, Real, Real> rotate_y(tuple<Real,Real, Real> point, Real sin_theta, Real cos_theta)
     {
-        T x = get<0>(point);
-        T y = get<1>(point);
-        T z = get<2>(point);
+        Real x = get<0>(point);
+        Real y = get<1>(point);
+        Real z = get<2>(point);
         
         return make_tuple(cos_theta * x - sin_theta * z, y, sin_theta * x + cos_theta * z);
     }
     
-    template <typename T>
-    tuple<T, T, T> rotate_z(tuple<T, T, T> point, T sin_theta, T cos_theta)
+    tuple<Real, Real, Real> rotate_z(tuple<Real, Real, Real> point, Real sin_theta, Real cos_theta)
     {
-        T x = get<0>(point);
-        T y = get<1>(point);
-        T z = get<2>(point);
+        Real x = get<0>(point);
+        Real y = get<1>(point);
+        Real z = get<2>(point);
         
         return make_tuple(cos_theta * x + sin_theta * y, cos_theta * y - sin_theta * x, z);
     }

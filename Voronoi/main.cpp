@@ -27,8 +27,8 @@ const int window_size = 600;
 int num_sites = 8000;
 
 //const THREAD_NUMBER num_threads = ONE_THREAD;
-const THREAD_NUMBER num_threads = TWO_THREADS;
-//const THREAD_NUMBER num_threads = FOUR_THREADS;
+//const THREAD_NUMBER num_threads = TWO_THREADS;
+const THREAD_NUMBER num_threads = FOUR_THREADS;
 
 /*
  *  Bad seeds:

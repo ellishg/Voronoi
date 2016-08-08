@@ -264,11 +264,9 @@ namespace Voronoi
     
     ArcSphere * traverse_skiplist_to_site(ArcSphere * arc, Real phi, std::vector<VoronoiCellSphere> * cells);
     
-    template <typename T>
-    inline std::tuple<T, T, T> rotate_y(std::tuple<T, T, T> point, T sin_theta, T cos_theta);
+    inline std::tuple<Real, Real, Real> rotate_y(std::tuple<Real, Real, Real> point, Real sin_theta, Real cos_theta);
     
-    template <typename T>
-    inline std::tuple<T, T, T> rotate_z(std::tuple<T, T, T> point, T sin_theta, T cos_theta);
+    inline std::tuple<Real, Real, Real> rotate_z(std::tuple<Real, Real, Real> point, Real sin_theta, Real cos_theta);
 }
 
 #endif /* VoronoiSphere_h */
