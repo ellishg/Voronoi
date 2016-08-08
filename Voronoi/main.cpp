@@ -24,7 +24,7 @@ SDL_GLContext context;
 
 const int window_size = 600;
 
-int num_sites = 4000;
+int num_sites = 8000;
 
 //const THREAD_NUMBER num_threads = ONE_THREAD;
 const THREAD_NUMBER num_threads = TWO_THREADS;
@@ -32,14 +32,15 @@ const THREAD_NUMBER num_threads = TWO_THREADS;
 
 /*
  *  Bad seeds:
- *  1741754784 (8000 sites)
+ *  1741754784 (7501 sites)
  *  1252816138 (16000 sites)
  *  319410050
  *  660258475
+ *  36063691 (256000 sites)
  */
 
 unsigned int seed = (unsigned int)time(NULL);
-//unsigned int seed = 1741754784;
+//unsigned int seed = 36063691;
 
 VoronoiDiagramSphere voronoi_diagram;
 
@@ -47,13 +48,14 @@ VoronoiDiagramSphere voronoi_diagram;
 float points[num_sites * 2];
 #endif
 
-void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, float sweep_line = 0)
+void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, ArcSphere * beach_head = NULL, vector<VoronoiCellSphere> * cells = NULL, double sweep_line = 0)
 {
     bool should_rotate = true;
     bool render_sites = true;
     bool render_voronoi = true;
     bool render_delaunay = true;
     bool render_sweep_line = true && sweep_line != 0;
+    bool render_beach_head = (true) && beach_head != NULL;
  
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
@@ -121,6 +123,21 @@ void render_voronoi_sphere(VoronoiDiagramSphere voronoi_diagram, float sweep_lin
             {
                 glVertex3f(sin(sweep_line) * cos(2.f * M_PI * i / num_steps), sin(sweep_line) * sin(2.f * M_PI * i / num_steps), cos(sweep_line));
             }
+        glEnd();
+    }
+    
+    if (render_beach_head)
+    {
+        glColor3f(1, 0, 0);
+        glBegin(GL_LINE_LOOP);
+        ArcSphere * cur = beach_head;
+        do
+        {
+            cur = cur->next[0];
+            PointSphere site = (*cells)[cur->cell_idx].site;
+            PointCartesian point = site.get_cartesian();
+            glVertex3f(point.x, point.y, point.z);
+        } while (cur != beach_head);
         glEnd();
     }
     
@@ -285,20 +302,20 @@ int main(int argc, const char * argv[])
     
     glMatrixMode(GL_MODELVIEW);
     
-    vector<tuple<float, float, float>> verts;
+    vector<tuple<double, double, double>> verts;
     
     const int precision = numeric_limits<int>::max();
     //const int precision = 10;
     for (int i = 0; i < num_sites; i++)
     {
 #ifdef SPHERICAL_MODE
-        float x = (rand() % precision) / (float)precision - 0.5f;
-        float y = (rand() % precision) / (float)precision - 0.5f;
-        float z = (rand() % precision) / (float)precision - 0.5f;
-
-        float r = sqrt(x*x + y*y + z*z);
+        double x = (rand() % precision) / (double)precision - 0.5f;
+        double y = (rand() % precision) / (double)precision - 0.5f;
+        double z = (rand() % precision) / (double)precision - 0.5f;
         
-        tuple<float, float, float> point = make_tuple(x / r, y / r, z / r);
+        double r = sqrt(x*x + y*y + z*z);
+        
+        tuple<double, double, double> point = make_tuple(x / r, y / r, z / r);
         
         verts.push_back(point);
 #else
@@ -316,7 +333,7 @@ int main(int argc, const char * argv[])
     
     chrono::duration<float> run_time = chrono::system_clock::now() - start_time;
     
-    cout << "Generated voronoi from " << num_sites << " sites in " << run_time.count() << " seconds.\n";
+    cout << "Generated voronoi from " << verts.size() << " sites in " << run_time.count() << " seconds.\n";
     
 #else
     Voronoi2D voronoi;
@@ -362,18 +379,18 @@ int main(int argc, const char * argv[])
                             seed = rand();
                             cout << "Seed = " << seed << endl;
                             srand(seed);
-                            vector<tuple<float, float, float>> verts;
+                            vector<tuple<double, double, double>> verts;
                             
                             const int precision = numeric_limits<int>::max();
                             for (int i = 0; i < num_sites; i++)
                             {
-                                float x = (rand() % precision) / (float)precision - 0.5f;
-                                float y = (rand() % precision) / (float)precision - 0.5f;
-                                float z = (rand() % precision) / (float)precision - 0.5f;
+                                double x = (rand() % precision) / (double)precision - 0.5f;
+                                double y = (rand() % precision) / (double)precision - 0.5f;
+                                double z = (rand() % precision) / (double)precision - 0.5f;
                                 
-                                float r = sqrt(x*x + y*y + z*z);
+                                double r = sqrt(x*x + y*y + z*z);
                                 
-                                tuple<float, float, float> point = make_tuple(x / r, y / r, z / r);
+                                tuple<double, double, double> point = make_tuple(x / r, y / r, z / r);
                                 
                                 verts.push_back(point);
                             }

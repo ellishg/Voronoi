@@ -41,8 +41,8 @@
 using namespace std;
 using namespace Voronoi;
 
-const int num_sites = 1000;
-const int num_trials = 50;
+const int num_sites = 4000;
+const int num_trials = 100;
 
 int main(int argc, const char * argv[]) {
     
@@ -67,18 +67,18 @@ int main(int argc, const char * argv[]) {
         
         cout << trial << ") Seed = " << seed << endl;
         
-        vector<tuple<float, float, float>> verts;
+        vector<tuple<double, double, double>> verts;
         
         const int precision = numeric_limits<int>::max();
         for (int i = 0; i < num_sites; i++)
         {
-            float x = (rand() % precision) / (float)precision - 0.5f;
-            float y = (rand() % precision) / (float)precision - 0.5f;
-            float z = (rand() % precision) / (float)precision - 0.5f;
+            double x = (rand() % precision) / (double)precision - 0.5f;
+            double y = (rand() % precision) / (double)precision - 0.5f;
+            double z = (rand() % precision) / (double)precision - 0.5f;
             
-            float r = sqrt(x*x + y*y + z*z);
+            double r = sqrt(x*x + y*y + z*z);
             
-            tuple<float, float, float> point = make_tuple(x / r, y / r, z / r);
+            tuple<double, double, double> point = make_tuple(x / r, y / r, z / r);
             
             verts.push_back(point);
         }

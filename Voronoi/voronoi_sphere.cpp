@@ -12,7 +12,7 @@ using namespace std;
 
 namespace Voronoi {
     
-    VoronoiDiagramSphere generate_voronoi(std::vector<std::tuple<float, float, float>> * verts, THREAD_NUMBER num_threads, void (*render)(VoronoiDiagramSphere, float), bool (*is_sleeping)())
+    VoronoiDiagramSphere generate_voronoi(std::vector<std::tuple<Real, Real, Real>> * verts, THREAD_NUMBER num_threads, void (*render)(VoronoiDiagramSphere, ArcSphere *, vector<VoronoiCellSphere> *, Real), bool (*is_sleeping)())
     {
         switch (num_threads) {
             case ONE_THREAD:
@@ -27,7 +27,7 @@ namespace Voronoi {
         }
     }
 
-    VoronoiDiagramSphere generate_voronoi_four_threads(vector<tuple<float, float, float>> * verts)
+    VoronoiDiagramSphere generate_voronoi_four_threads(vector<tuple<Real, Real, Real>> * verts)
     {
         /*
          *  The voronoi diagram is computed from sites on the sphere corresponding
@@ -42,18 +42,18 @@ namespace Voronoi {
         
         VoronoiDiagramSphere diagram_a, diagram_b, diagram_c, diagram_d;
         
-        vector<tuple<float, float, float>> b_verts, c_verts, d_verts;
+        vector<tuple<Real, Real, Real>> b_verts, c_verts, d_verts;
         
         for (auto point : *verts)
         {
             // We transform vertices to corresponding points on the tetrahedron
-            auto b = rotate_y<float>(point, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            auto b = rotate_y<Real>(point, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
             
-            auto c = rotate_z<float>(point, SIN_TWO_PI_3, COS_TWO_PI_3);
-            c = rotate_y<float>(c, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            auto c = rotate_z<Real>(point, SIN_TWO_PI_3, COS_TWO_PI_3);
+            c = rotate_y<Real>(c, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
             
-            auto d = rotate_z<float>(point, SIN_FOUR_PI_3, COS_FOUR_PI_3);
-            d = rotate_y<float>(d, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
+            auto d = rotate_z<Real>(point, SIN_FOUR_PI_3, COS_FOUR_PI_3);
+            d = rotate_y<Real>(d, SIN_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2, COS_NEG_ARCSIN_ONE_THIRD_PLUS_PI_2);
             
             b_verts.push_back(b);
             c_verts.push_back(c);
@@ -139,11 +139,11 @@ namespace Voronoi {
         return diagram_a;
     }
 
-    VoronoiDiagramSphere generate_voronoi_two_threads(vector<tuple<float, float, float>> * verts)
+    VoronoiDiagramSphere generate_voronoi_two_threads(vector<tuple<Real, Real, Real>> * verts)
     {
         VoronoiDiagramSphere diagram_top_down, diagram_bottom_up;
         
-        vector<tuple<float, float, float>> bottom_up_verts;
+        vector<tuple<Real, Real, Real>> bottom_up_verts;
         
         for (auto point : *verts)
         {
@@ -181,7 +181,7 @@ namespace Voronoi {
         return diagram_top_down;
     }
     
-    void compute_priority_queues(VoronoiDiagramSphere * voronoi_diagram, vector<tuple<float, float, float>> * verts, Real bound_theta)
+    void compute_priority_queues(VoronoiDiagramSphere * voronoi_diagram, vector<tuple<Real, Real, Real>> * verts, Real bound_theta)
     {        
         Real sweep_line = 0;
         
@@ -267,7 +267,7 @@ namespace Voronoi {
         }
     }
 
-    VoronoiDiagramSphere generate_voronoi_one_thread(vector<tuple<float, float, float>> * verts, void (*render)(VoronoiDiagramSphere, float), bool (*is_sleeping)())
+    VoronoiDiagramSphere generate_voronoi_one_thread(vector<tuple<Real, Real, Real>> * verts, void (*render)(VoronoiDiagramSphere, ArcSphere *, vector<VoronoiCellSphere> *, Real), bool (*is_sleeping)())
     {
         bool should_render = (false) && render != NULL && is_sleeping != NULL;
 
@@ -300,8 +300,8 @@ namespace Voronoi {
         
         while (!site_event_queue.empty() || !circle_event_queue.empty())
         {
-            
-            //if (sweep_line >= 2.11777) {should_render = true;}
+            //if (sweep_line >= 1.00736) {should_render = true;}
+            //cout << sweep_line << endl;
             
             //cout << "[" << site_event_queue.size() << ", " << circle_event_queue.size() << "]\n";
             
@@ -321,7 +321,7 @@ namespace Voronoi {
                 
                 while (should_render && is_sleeping())
                 {
-                    render(voronoi_diagram, (float)sweep_line);
+                    render(voronoi_diagram, beach_head, &cells, (Real)sweep_line);
                 }
             }
             else
@@ -333,13 +333,13 @@ namespace Voronoi {
                 
                 while (should_render && is_sleeping())
                 {
-                    render(voronoi_diagram, (float)sweep_line);
+                    render(voronoi_diagram, beach_head, &cells, (Real)sweep_line);
                 }
             }
         }
         
         // Clean up
-        while (beach_head->next[0] != beach_head && beach_head->prev[0] != beach_head)
+        while (beach_head != NULL && beach_head->next[0] != beach_head && beach_head->prev[0] != beach_head)
         {
             // Deallocate the beachline
             remove_arc_sphere(beach_head, beach_head);
@@ -430,9 +430,14 @@ namespace Voronoi {
             else if (valid_arc && ((phi_start < phi_end && phi_start <= cell.site.phi && cell.site.phi <= phi_end) || (phi_start > phi_end && (phi_start <= cell.site.phi || cell.site.phi <= phi_end))))
             {
                 // The arc is found!
-                //cout << setprecision(20);
-                //cout << phi_start << ", " << phi_end << endl;
-                //cout << (*cells)[arc->cell_idx].site << cell.site << (*cells)[arc->next[0]->cell_idx].site << sweep_line << "\n\n";
+                /*cout << setprecision(16) << hexfloat;
+                cout << "Prev arc = " << (*cells)[arc->prev[0]->cell_idx].site;
+                cout << "Cur arc = " << (*cells)[arc->cell_idx].site;
+                cout << "Next arc = " << (*cells)[arc->next[0]->cell_idx].site;
+                cout << "Sweepline = " << sweep_line << endl;
+                cout << "Phi Start = " << phi_start << endl;
+                cout << "Phi End = " << phi_end << endl << endl;
+                */
                 
                 if (arc->event != NULL)
                 {
@@ -470,7 +475,6 @@ namespace Voronoi {
                 left = left->prev[0];
             }
             
-            //if (sweep_line > 2.11777) {cout << "Next site " << (*cells)[arc->cell_idx].site;}
             move_right = !move_right;
         }
     }
@@ -625,8 +629,11 @@ namespace Voronoi {
              *  The lower site contains the phi of our intersection.
              */
             phi_intersection = (left.theta > right.theta) ? left.phi : right.phi;
-            //cout << "Arc is close to sweep line. " << /*setprecision(50) <<*/ abs(e) << " > " << sqrt_a_b << endl << left << right << sweep_line << endl;
+            /*cout << "cos(left.theta) = " << cos_left_theta << endl;
+            cout << "a = " << a << "\nb = " << b << endl;
+            cout << "Arc is close to sweep line.\n" << abs(e) << " > " << sqrt_a_b << endl << left << right << sweep_line << endl << endl;*/
             return true;
+            //return false;
         }
         
         Real sin_phi_int_plus_gamma = e / sqrt_a_b;
@@ -698,6 +705,8 @@ namespace Voronoi {
 
     void remove_arc_sphere(ArcSphere * arc, ArcSphere * & beach_head)
     {
+        if (beach_head == NULL) {return;}
+        
         if (beach_head == arc)
         {
             beach_head = arc->next[0];
@@ -754,17 +763,28 @@ namespace Voronoi {
 
     ArcSphere * traverse_skiplist_to_site(ArcSphere * arc, Real phi, vector<VoronoiCellSphere> * cells)
     {
+        /*
+         *  Remember that arcs on the beachline are duplicated when an arc is inserted.
+         *  So that the beachline is not necessarily sorted by phi.
+         *  This function does NOT work as you might expect because of this!
+         *  But it will most likely move closer to the destination.
+         */
+        
         int level = arc->height - 1;
         
         while (level >= 0)
         {
-            Real delta = abs(phi - (*cells)[arc->cell_idx].site.phi);
+            int prev_index = arc->prev[level]->cell_idx;
+            int cur_index = arc->cell_idx;
+            int next_index = arc->next[level]->cell_idx;
+        
+            Real delta = abs(phi - (*cells)[cur_index].site.phi);
             if (delta > M_PI) {delta = 2.f * M_PI - delta;}
             
-            Real next_delta = abs(phi - (*cells)[arc->next[level]->cell_idx].site.phi);
+            Real next_delta = abs(phi - (*cells)[next_index].site.phi);
             if (next_delta > M_PI) {next_delta = 2.f * M_PI - next_delta;}
 
-            Real prev_delta = abs(phi - (*cells)[arc->prev[level]->cell_idx].site.phi);
+            Real prev_delta = abs(phi - (*cells)[prev_index].site.phi);
             if (prev_delta > M_PI) {prev_delta = 2.f * M_PI - prev_delta;}
             
             if (next_delta < delta && next_delta < prev_delta) // if next_delta is the min
