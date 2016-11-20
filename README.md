@@ -17,3 +17,5 @@ This algorithm can be run on one, two, or four threads.
 Here are a few optimizations that I could possibly do:
 
 There are tons of calculations in the make_circle, parabolic_intersection, and phi_to_point functions. Maybe I could find some clever way to speed these up.
+
+![Tenthousand Sites] (https://github.com/sparkasaurusRex/Voronoi/blob/master/ten_thousand_sites.png)
